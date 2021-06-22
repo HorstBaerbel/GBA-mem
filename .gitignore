@@ -1,0 +1,8 @@
+build/
+
+KiCad/*-bak
+KiCad/*.dsn
+KiCad/*.ses
+KiCad/*.bin
+KiCad/fp-info-cache
+KiCad/GBAmem-cache.lib
