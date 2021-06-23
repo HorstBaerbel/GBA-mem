@@ -576,16 +576,30 @@ Wire Notes Line
 	3600 4750 3600 5350
 Wire Notes Line
 	3600 5350 4200 5350
+Text Notes 3250 2150 0    50   ~ 0
+ CS# -> GND\n/CS1 -> GND\n CS2 -> 3V3
+Wire Notes Line
+	4050 2050 4050 3400
+Wire Notes Line
+	5450 3100 5550 3100
+Wire Notes Line
+	4050 3400 5450 3400
+Wire Notes Line
+	5450 5550 5600 5550
+Wire Notes Line
+	5450 3100 5450 5550
+Wire Notes Line
+	3850 2050 4950 2050
 Wire Wire Line
 	3850 5550 4850 5550
 Wire Wire Line
 	3900 4950 4850 4950
 Wire Wire Line
+	6050 5550 7000 5550
+Wire Wire Line
 	6050 4950 7000 4950
 Wire Wire Line
 	6050 2000 7400 2000
-Wire Wire Line
-	6050 5550 7000 5550
 Wire Bus Line
 	6600 3750 6600 6150
 Wire Bus Line
