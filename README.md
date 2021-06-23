@@ -28,11 +28,12 @@ All pins have been connected straight through, with the exception of /CS1 (/CE1)
 
 Compatible SRAM chips for the board:
 
-| Model                                                                        | min. access time | max. power draw | working |
-| ---------------------------------------------------------------------------- | ---------------- | --------------- | ------- |
-| [IS62WV12816BLL-55TLI](http://www.issi.com/WW/pdf/62WV12816ALL.pdf)          | 55ns             | ~25mA           | ?       |
-| [IS62WV12816EBLL-45TLI](http://www.issi.com/WW/pdf/62-65WV12816EALL-BLL.pdf) | 45ns             | ~15mA           | ?       |
-| [CY62136FV30LL-45ZSXIT](https://www.cypress.com/file/43866/download)         | 45ns             | ~18mA           | ?       |
+| Model                                                                                                                    | min. access time | max. power draw | working |
+| ------------------------------------------------------------------------------------------------------------------------ | ---------------- | --------------- | ------- |
+| [IS62WV12816BLL-55TLI / -BLI](http://www.issi.com/WW/pdf/62WV12816ALL.pdf)                                               | 55ns             | ~25mA           | ?       |
+| [IS62WV12816EBLL-45TLI](http://www.issi.com/WW/pdf/62-65WV12816EALL-BLL.pdf)                                             | 45ns             | ~15mA           | ?       |
+| [CY62136FV30LL-45ZSXIT / -45ZSXI / -45ZSXA](https://www.cypress.com/file/43866/download)                                 | 45ns             | ~18mA           | ?       |
+| [CY62136ESL-45ZSXI](https://www.mouser.de/datasheet/2/100/001-48147_CY62136ESL_MoBL_R_2-Mbit_128_K_X_16_Stat-319203.pdf) | 45ns             | ~20mA           | ?       |
 
 The power draw of the replacement chips seems to be comparable to that of the originals. I'd go with the IS62WV12816EBLL-45TLI if you can find it, because of the lowest power draw.
 
@@ -53,7 +54,7 @@ You can use the [GBA binary](MemTestGBA.gba) to test stability and performance. 
 
 ```sh
 mkdir build && cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=DevkitArmGBA.cmake
+cmake ..
 make -j $(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
 ```
 
