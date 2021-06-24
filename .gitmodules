@@ -1,0 +1,3 @@
+[submodule "src/GBA-demo-framework"]
+	path = src/GBA-demo-framework
+	url = https://github.com/HorstBaerbel/GBA-demo-framework.git

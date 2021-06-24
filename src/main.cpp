@@ -5,7 +5,8 @@
 #include <gba_systemcalls.h>
 #include <gba_interrupt.h>
 
-#include "memory.h"
+#include <memory/memory.h>
+
 #include "./data/dkp_logo.h"
 
 int main()
