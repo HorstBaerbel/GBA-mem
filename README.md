@@ -49,7 +49,7 @@ You can use the [GBA binary](MemTestGBA.gba) to test stability and performance. 
 
 ## From the command line
 
-* You **must** have [CMake](https://cmake.org/), [devkitPro / devKitARM](https://devkitpro.org) r52-1 or higher [installed](https://devkitpro.org/wiki/Getting_Started).
+* You **must** have [CMake](https://cmake.org/) 3.1.0 or higher, [devkitPro / devKitARM](https://devkitpro.org) r52-1 or higher [installed](https://devkitpro.org/wiki/Getting_Started).
 * Navigate to the [src](src) folder, then:
 
 ```sh
