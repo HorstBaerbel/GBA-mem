@@ -1,3 +1,0 @@
-[submodule "src/3ds-cmake"]
-	path = src/3ds-cmake
-	url = https://github.com/Xtansia/3ds-cmake.git
