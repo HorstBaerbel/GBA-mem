@@ -31,6 +31,7 @@ LIST(APPEND TARGET_LIB_DIRS
 )
 
 LIST(APPEND TARGET_LIBS
+	gba
     gbafw
 )
 

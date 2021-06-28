@@ -1,11 +1,13 @@
 #include <gba_base.h>
 #include <gba_video.h>
+#include <gba_input.h>
 
 #include <debug/print.h>
 #include <debug/itoa.h>
 #include <memory/memory.h>
 #include <sys/interrupts.h>
 #include <sys/memctrl.h>
+#include <sys/syscall.h>
 #include <tiles.h>
 #include <video.h>
 
@@ -74,9 +76,9 @@ int main()
 	printString("L2 Cache 0K | Testing: 0-256K", 0, 3, 1, 15);
 	printString("L3 Cache 0K | Pattern:", 0, 4, 1, 15);
 	printString("EWRAM 256K  | Speed:", 0, 5, 1, 15);
-	printString("EWRAM timing:", 0, 6, 1, 15);
+	printString("EWRAM timing: 3/3/6", 0, 6, 1, 15);
 	printString("        (START) Reboot        ", 0, 18, 7, 1);
-	printString("(L) Timing --    (R) Timing ++", 0, 19, 7, 1);
+	printString("(L) Timing ++    (R) Timing --", 0, 19, 7, 1);
 	// start wall clock
 	irqInit();
 	Time::start();
@@ -84,7 +86,9 @@ int main()
 	uint32_t counter = 0;
 	uint16_t color = 0;
 	char buffer[256] = {0};
-	const uint32_t EwRAMWaitStates[] = {WaitEwramNormal, WaitEwramFast, WaitEwramLudicrous};
+	uint32_t waitStateIndex = 0;
+	const uint32_t WaitStates[] = {WaitEwramNormal, WaitEwramFast, WaitEwramLudicrous};
+	const char *WaitStateStrings[] = {"3/3/6", "2/2/4", "1/1/2"};
 	do
 	{
 		auto startTime = Time::getTime();
@@ -104,8 +108,24 @@ int main()
 			color = color == 0 ? 4 : 0;
 		}
 		printString("GBA", 8, 0, 2, color);
+		// check keys
+		scanKeys();
+		auto keys = keysDown();
+		if (keys & KEY_L)
+		{
+			waitStateIndex = waitStateIndex > 0 ? waitStateIndex - 1 : 0;
+		}
+		else if (keys & KEY_R)
+		{
+			waitStateIndex = waitStateIndex < 2 ? waitStateIndex + 1 : 2;
+		}
+		RegWaitEwram = WaitStates[waitStateIndex];
+		printString(WaitStateStrings[waitStateIndex], 14, 6, 1, 15);
+		if (keys & KEY_START)
+		{
+			SYSCALL(0x26);
+		}
 		//Video::waitForVblank(true);
-		// reboot with SWI 26h
 		counter++;
 	} while (true);
 }
