@@ -5,11 +5,17 @@
 #include <gba_interrupt.h>
 
 #include <debug/print.h>
+#include <debug/itoa.h>
 #include <memory/memory.h>
+#include <sys/memctrl.h>
 #include <tiles.h>
 #include <video.h>
 
 #include "./data/font_8x8.h"
+
+#define EWRAM_START ((uint8_t *)(0x02000000))
+#define EWRAM_SIZE ((uint32_t)0x40000)
+#define NR_OF_CYCLES ((uint32_t)10)
 
 // define all functions here, so we can put them into IWRAM
 int main() IWRAM_CODE;
@@ -20,7 +26,7 @@ void printString(const char *s, uint16_t x, uint16_t y, uint16_t backColor = 0, 
 void printChar(char c, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
 {
 	uint16_t tileNo = static_cast<uint16_t>(c) - 32;
-	uint32_t tileIndex = ((y & 255) * 256) + (x & 255);
+	uint32_t tileIndex = ((y & 31) * 32) + (x & 31);
 	uint16_t *background = Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_1000);
 	background[tileIndex] = 95 | ((backColor & 15) << 12);
 	uint16_t *text = Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_2000);
@@ -41,6 +47,11 @@ void printString(const char *s, uint16_t x, uint16_t y, uint16_t backColor, uint
 
 int main()
 {
+	// lets set some cool waitstates
+	RegWaitCnt = WaitCntNormal;
+	// set undocumented register for EWRAM waitstates
+	// sets EWRAM wait states to 2/2/4 vs. 3/3/6 (default 0x0D000020)
+	RegWaitEwram = WaitEwramNormal;
 	// Set graphics to mode 0 and enable background 2
 	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON;
 	// copy data to tile map
@@ -55,11 +66,40 @@ int main()
 		BG_PALETTE[i * 16] = 0;
 		BG_PALETTE[i * 16 + 1] = COLORS[i];
 	}
+	// build start screen
+	Memory::memset32(Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_1000), 0x105F105F, (32 * 32) >> 1);
+	Memory::memset32(Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_1000) + 32 * 18, 0x705F705F, 64 >> 1);
+	printString(" MemTestGBA ", 0, 0, 2, 0);
+	printString("| Pass", 12, 0, 1, 15);
+	printString("ARM7 16MHz  | Test", 0, 1, 1, 15);
+	printString("L1 Cache 0K | Test", 0, 2, 1, 15);
+	printString("L2 Cache 0K | Testing: 0-256K", 0, 3, 1, 15);
+	printString("L3 Cache 0K | Pattern:", 0, 4, 1, 15);
+	printString("EWRAM 256K  | Speed:", 0, 5, 1, 15);
+	printString("EWRAM timing:", 0, 6, 1, 15);
+	printString("        (START) Reboot        ", 0, 18, 7, 1);
+	printString("(B) Timing ++    (A) Timing --", 0, 19, 7, 1);
+	// start wall clock
+	irqInit();
+	Time::start();
+	// start main loop
 	uint16_t color = 0;
+	char buffer[256] = {0};
 	do
 	{
-		printString("Hello world!", 0, 0, color, ~color);
-		color++;
+		auto startTime = Time::getTime();
+		for (uint32_t cycle = 0; cycle < NR_OF_CYCLES; cycle++)
+		{
+			Memory::memset32(EWRAM_START, 0x12345678, EWRAM_SIZE >> 2);
+		}
+		auto endTime = Time::getTime();
+		auto time = endTime - startTime;
+		auto MBperS = (((EWRAM_SIZE * NR_OF_CYCLES) / 1024) / time) / 1024;
+		fptoa(MBperS.raw(), buffer, decltype(MBperS)::BITSF, 2);
+		printString(buffer, 22, 5, 1, 15);
+		printString("MB/s", 26, 5, 1, 15);
+		printString("GBA", 8, 0, 2, color++);
 		Video::waitForVblank(true);
+		// reboot with SWI 26h
 	} while (true);
 }
