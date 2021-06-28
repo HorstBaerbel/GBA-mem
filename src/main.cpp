@@ -1,12 +1,10 @@
 #include <gba_base.h>
 #include <gba_video.h>
-#include <gba_dma.h>
-#include <gba_systemcalls.h>
-#include <gba_interrupt.h>
 
 #include <debug/print.h>
 #include <debug/itoa.h>
 #include <memory/memory.h>
+#include <sys/interrupts.h>
 #include <sys/memctrl.h>
 #include <tiles.h>
 #include <video.h>
@@ -78,13 +76,15 @@ int main()
 	printString("EWRAM 256K  | Speed:", 0, 5, 1, 15);
 	printString("EWRAM timing:", 0, 6, 1, 15);
 	printString("        (START) Reboot        ", 0, 18, 7, 1);
-	printString("(B) Timing ++    (A) Timing --", 0, 19, 7, 1);
+	printString("(L) Timing --    (R) Timing ++", 0, 19, 7, 1);
 	// start wall clock
 	irqInit();
 	Time::start();
 	// start main loop
+	uint32_t counter = 0;
 	uint16_t color = 0;
 	char buffer[256] = {0};
+	const uint32_t EwRAMWaitStates[] = {WaitEwramNormal, WaitEwramFast, WaitEwramLudicrous};
 	do
 	{
 		auto startTime = Time::getTime();
@@ -98,8 +98,14 @@ int main()
 		fptoa(MBperS.raw(), buffer, decltype(MBperS)::BITSF, 2);
 		printString(buffer, 22, 5, 1, 15);
 		printString("MB/s", 26, 5, 1, 15);
-		printString("GBA", 8, 0, 2, color++);
-		Video::waitForVblank(true);
+		// blink "GBA"
+		if (counter & 3 == 3)
+		{
+			color = color == 0 ? 4 : 0;
+		}
+		printString("GBA", 8, 0, 2, color);
+		//Video::waitForVblank(true);
 		// reboot with SWI 26h
+		counter++;
 	} while (true);
 }
