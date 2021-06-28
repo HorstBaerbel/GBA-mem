@@ -54,7 +54,7 @@ You can use the [GBA binary](MemTestGBA.gba) to test stability and performance. 
 
 ```sh
 mkdir build && cd build
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j $(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
 ```
 
