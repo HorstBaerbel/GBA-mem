@@ -106,7 +106,7 @@ void printSpeed(Math::fp1616_t time, uint32_t bytes, uint16_t x, uint16_t y, uin
 	auto MBperS = ((bytes / 1024) / time) / 1024;
 	fptoa(MBperS.raw(), printBuffer, decltype(MBperS)::BITSF, 2);
 	auto valueLength = printString(printBuffer, x, y, backColor, textColor);
-	printString(" MB/s", x + valueLength, y, backColor, textColor);
+	printString(" MB/s ", x + valueLength, y, backColor, textColor);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -311,8 +311,12 @@ uint32_t runErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pa
 
 static bool state = false;
 static bool testSpeed = true;
+static uint32_t waitStateIndex = 0;
+static const uint32_t WaitStates[] = {WaitEwramNormal, WaitEwramFast, WaitEwramLudicrous};
+static const char *WaitStateStrings[] = {"3/3/6", "2/2/4", "1/1/2"};
+static const char *WaitStateOptionStrings[] = {"                (R) Timings --", "(L) Timings ++  (R) Timings --", "(L) Timings ++                "};
 
-void toggleState()
+void updateState()
 {
 	state = !state;
 	printChar('+', 10, 0, 2, state ? 4 : 0);
@@ -320,17 +324,55 @@ void toggleState()
 	printString("Speed test", 20, 17, 7, testSpeed && state ? 4 : 1);
 }
 
+void updateInput()
+{
+	scanKeys();
+	auto keys = keysDown();
+	auto waitStateIndexBefore = waitStateIndex;
+	if (keys & KEY_L)
+	{
+		waitStateIndex = waitStateIndex > 0 ? waitStateIndex - 1 : 0;
+	}
+	else if (keys & KEY_R)
+	{
+		waitStateIndex = waitStateIndex < 2 ? waitStateIndex + 1 : 2;
+	}
+	if (waitStateIndex != waitStateIndexBefore)
+	{
+		RegWaitEwram = WaitStates[waitStateIndex];
+		printString(WaitStateStrings[waitStateIndex], 15, 3, 1, 15);
+		printString(WaitStateOptionStrings[waitStateIndex], 0, 18, 7, 1);
+	}
+	auto testSpeedBefore = testSpeed;
+	if (keys & KEY_A)
+	{
+		testSpeed = true;
+	}
+	else if (keys & KEY_B)
+	{
+		testSpeed = false;
+	}
+	if (testSpeed != testSpeedBefore)
+	{
+		printString("Error test", 4, 17, 7, !testSpeed && state ? 4 : 1);
+		printString("Speed test", 20, 17, 7, testSpeed && state ? 4 : 1);
+	}
+	if (keys & KEY_START)
+	{
+		SYSCALL(0x26);
+	}
+}
+
 int main()
 {
 	// set up some variables
 	uint32_t errorCount = 0;
 	uint32_t patternIndex = 0;
-	uint32_t waitStateIndex = 0;
 	static const uint32_t CyclesSpeed[] = {8, 10, 12};
 	static const uint32_t CyclesErrors[] = {4, 6, 8};
-	static const uint32_t WaitStates[] = {WaitEwramNormal, WaitEwramFast, WaitEwramLudicrous};
-	static const char *WaitStateStrings[] = {"3/3/6", "2/2/4", "1/1/2"};
-	static const char *WaitStateOptionStrings[] = {"                (R) Timings --", "(L) Timings ++  (R) Timings --", "(L) Timings ++                "};
+	// allocate memory
+	Memory::init();
+	const TestConfig config = {Memory::malloc_EWRAM<uint8_t>(EWRAM_ALLOC_SIZE), EWRAM_ALLOC_SIZE, Memory::malloc_IWRAM<uint8_t>(IWRAM_ALLOC_SIZE), IWRAM_ALLOC_SIZE};
 	// set default waitstates for GamePak ROM and EWRAM
 	RegWaitCnt = WaitCntFast;
 	RegWaitEwram = WaitEwramNormal;
@@ -371,14 +413,16 @@ int main()
 	// start wall clock
 	irqInit();
 	Time::start();
-	// set up time to call function every second
-	irqSet(IRQMask::IRQ_TIMER2, toggleState);
+	// set up timer to call function every 1s
+	irqSet(IRQMask::IRQ_TIMER2, updateState);
 	irqEnable(IRQMask::IRQ_TIMER2);
 	REG_TM2CNT_L = 65536 - 16384;
 	REG_TM2CNT_H = TIMER_START | TIMER_IRQ | 3;
-	// allocate memory
-	Memory::init();
-	const TestConfig config = {Memory::malloc_EWRAM<uint8_t>(EWRAM_ALLOC_SIZE), EWRAM_ALLOC_SIZE, Memory::malloc_IWRAM<uint8_t>(IWRAM_ALLOC_SIZE), IWRAM_ALLOC_SIZE};
+	// set up timer to call function every 150ms
+	irqSet(IRQMask::IRQ_TIMER1, updateInput);
+	irqEnable(IRQMask::IRQ_TIMER1);
+	REG_TM1CNT_L = 65536 - 2458;
+	REG_TM1CNT_H = TIMER_START | TIMER_IRQ | 3;
 	// start main loop
 	do
 	{
@@ -404,33 +448,6 @@ int main()
 			auto nrOfDash = (patternIndex * 12) / TEST_PATTERN_COUNT;
 			printChars('#', nrOfDash, 18, 0, 1, 15);
 			printChars(' ', 12 - nrOfDash, 18 + nrOfDash, 0, 1, 15);
-		}
-		// check keys
-		scanKeys();
-		auto keys = keysDown();
-		if (keys & KEY_L)
-		{
-			waitStateIndex = waitStateIndex > 0 ? waitStateIndex - 1 : 0;
-		}
-		else if (keys & KEY_R)
-		{
-			waitStateIndex = waitStateIndex < 2 ? waitStateIndex + 1 : 2;
-		}
-		RegWaitEwram = WaitStates[waitStateIndex];
-		printString(WaitStateStrings[waitStateIndex], 15, 3, 1, 15);
-		printString(WaitStateOptionStrings[waitStateIndex], 0, 18, 7, 1);
-		if (keys & KEY_A)
-		{
-			testSpeed = true;
-		}
-		else if (keys & KEY_B)
-		{
-			testSpeed = false;
-			patternIndex = 0;
-		}
-		if (keys & KEY_START)
-		{
-			SYSCALL(0x26);
 		}
 		//Video::waitForVblank(true);
 	} while (true);
