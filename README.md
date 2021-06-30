@@ -43,7 +43,15 @@ The [KiCad](KiCad) directory contains the schematics and PCB layout and also ger
 
 ## The software
 
-You can use the [GBA binary](MemTestGBA.gba) to test stability and performance. The source code for that can be found in the [src](src) directory.
+You can use the [GBA binary](MemTestGBA.gba) to test stability and performance:
+
+<p align="center">
+    <span>
+        <img src="MemTestGBA.png" width=50%;" title="Memory test">
+    </span>
+</p>
+
+The source code for that can be found in the [src](src) directory.
 
 # How to build the test binary?
 

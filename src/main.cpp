@@ -16,7 +16,7 @@
 #include "./data/font_8x8.h"
 
 #define IWRAM_ALLOC_SIZE (16 * 1024)
-#define EWRAM_ALLOC_SIZE (128 * 1024)
+#define EWRAM_ALLOC_SIZE (160 * 1024)
 
 struct TestConfig
 {
@@ -315,6 +315,8 @@ static uint32_t waitStateIndex = 0;
 static const uint32_t WaitStates[] = {WaitEwramNormal, WaitEwramFast, WaitEwramLudicrous};
 static const char *WaitStateStrings[] = {"3/3/6", "2/2/4", "1/1/2"};
 static const char *WaitStateOptionStrings[] = {"                (R) Timings --", "(L) Timings ++  (R) Timings --", "(L) Timings ++                "};
+constexpr uint32_t CyclesSpeed = 8;
+constexpr uint32_t CyclesErrors = 4;
 
 void updateState()
 {
@@ -372,8 +374,6 @@ int main()
 	// set up some variables
 	uint32_t errorCount = 0;
 	uint32_t patternIndex = 0;
-	static const uint32_t CyclesSpeed[] = {8, 10, 12};
-	static const uint32_t CyclesErrors[] = {4, 6, 8};
 	// allocate memory
 	Memory::init();
 	const TestConfig config = {Memory::malloc_EWRAM<uint8_t>(EWRAM_ALLOC_SIZE), EWRAM_ALLOC_SIZE, Memory::malloc_IWRAM<uint8_t>(IWRAM_ALLOC_SIZE), IWRAM_ALLOC_SIZE};
@@ -432,7 +432,7 @@ int main()
 	{
 		if (testSpeed)
 		{
-			auto result = runSpeedTest(config, CyclesSpeed[waitStateIndex]);
+			auto result = runSpeedTest(config, CyclesSpeed);
 			printSpeed(result.readTime, result.bytesPerTest, 15, 5, 1, 15);
 			printSpeed(result.writeTime, result.bytesPerTest, 15, 6, 1, 15);
 			printSpeed(result.setTime, result.bytesPerTest, 15, 7, 1, 15);
@@ -446,7 +446,7 @@ int main()
 		{
 			auto pattern = testPattern(patternIndex);
 			printValue(pattern, 16, 22, 2, 1, 15);
-			errorCount += runErrorTest(config, CyclesErrors[waitStateIndex], pattern);
+			errorCount += runErrorTest(config, CyclesErrors, pattern);
 			printValue(errorCount, 10, 8, 14, 1, errorCount > 0 ? 4 : 15);
 			patternIndex = patternIndex >= TEST_PATTERN_COUNT ? 0 : patternIndex + 1;
 			auto nrOfDash = (patternIndex * 12) / TEST_PATTERN_COUNT;
