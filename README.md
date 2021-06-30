@@ -6,7 +6,7 @@
 
 # Game Boy Advance faster EWRAM hack
 
-The GBA has 256kB of external work RAM in the form of an 128kx16 SRAM chip with 70ns (M68AS128DL70N6), 85ns ([μPD442012AGY-BB85X-MJH](http://www.dexsilicium.com/Nec_D442012AGY.pdf)), or even 120ns ([HY62LF16206A-LT12C](https://www.alldatasheet.com/datasheet-pdf/pdf/96180/HYNIX/HY62LF16206A.html)) access time, depending on the chip (good hardware database [here](https://gbhwdb.gekkio.fi/consoles/agb/). The regular EWRAM wait states are 3/3/6 clock cycles (for 1/2/4 bytes of data). Setting the [undocumented EWRAM wait states](http://problemkaputt.de/gbatek.htm#gbasystemcontrol) to 0Eh (1 wait state) allows you to speed up EWRAM access to 1 wait state (2/2/4 clock cycles). Setting it to 0Fh will lock up the GBA though, probably because 0 wait states are out of the specs of all SRAM chips ever used (access times < 62ns are needed). But now 20 years later we have SRAM chips available with as low as 10ns access time.
+The GBA has 256kB of external work RAM in the form of an 128kx16 SRAM chip with 70ns (M68AS128DL70N6), 85ns ([μPD442012AGY-BB85X-MJH](http://www.dexsilicium.com/Nec_D442012AGY.pdf)), or even 120ns ([HY62LF16206A-LT12C](https://www.alldatasheet.com/datasheet-pdf/pdf/96180/HYNIX/HY62LF16206A.html)) access time, depending on the chip (good hardware database [here](https://gbhwdb.gekkio.fi/consoles/agb/). The regular EWRAM wait states are 3/3/6 clock cycles (for 1/2/4 bytes of data). Setting the [undocumented EWRAM wait states](http://problemkaputt.de/gbatek.htm#gbasystemcontrol) to 0Eh (1 wait state) allows you to speed up EWRAM access to 1 wait state (2/2/4 clock cycles). Setting it to 0Fh will crash / lock up the GBA though, probably because 0 wait states are out of the specs of all SRAM chips ever used (access times < 62ns are needed) and memory get corrupted (see [testing memory](#testing-memory)). But now 20 years later we have SRAM chips available with as low as 10ns access time.
 
 ## The hardware
 
@@ -41,9 +41,9 @@ The power draw of the replacement chips seems to be comparable to that of the or
 
 The [KiCad](KiCad) directory contains the schematics and PCB layout and also gerber files (exported for JLPCB). I chose [JLPCB](https://jlcpcb.com) as a manufacturer in this case and a board thickness of 0.8mm.
 
-## The software
+## Testing memory
 
-You can use the [GBA binary](MemTestGBA.gba) to test stability and performance:
+You can use the [MemTestGBA binary](MemTestGBA.gba) to test stability and performance:
 
 <p align="center">
     <span>
