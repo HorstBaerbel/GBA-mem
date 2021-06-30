@@ -180,7 +180,7 @@ void readBlockwise(const TestConfig &config)
 
 void writeBlockwise(const TestConfig &config)
 {
-	volatile uint32_t v = 12345678;
+	volatile uint32_t v = 0x12345678;
 	auto count = config.destSize >> 2;
 	auto dest32 = reinterpret_cast<uint32_t *>(config.dest);
 	for (uint32_t i = 0; i < count; i++)
@@ -290,7 +290,7 @@ uint32_t runErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pa
 	{
 		// Moving inversions algorithm (sort of)
 		DMA::dma_fill32(config.dest, pattern, count);
-		for (int32_t i = 0; i < count; i++)
+		for (int32_t i = 0; i < static_cast<int32_t>(count); i++)
 		{
 			nrOfErrors += src32[i] != pattern ? 1 : 0;
 			src32[i] = complement;
@@ -318,6 +318,7 @@ static const char *WaitStateOptionStrings[] = {"                (R) Timings --",
 
 void updateState()
 {
+	// blink UI elements
 	state = !state;
 	printChar('+', 10, 0, 2, state ? 4 : 0);
 	printString("Error test", 4, 17, 7, !testSpeed && state ? 4 : 1);
@@ -328,6 +329,7 @@ void updateInput()
 {
 	scanKeys();
 	auto keys = keysDown();
+	// check if need to change wait states
 	auto waitStateIndexBefore = waitStateIndex;
 	if (keys & KEY_L)
 	{
@@ -343,6 +345,7 @@ void updateInput()
 		printString(WaitStateStrings[waitStateIndex], 15, 3, 1, 15);
 		printString(WaitStateOptionStrings[waitStateIndex], 0, 18, 7, 1);
 	}
+	// check if we need to change the test mode
 	auto testSpeedBefore = testSpeed;
 	if (keys & KEY_A)
 	{
@@ -357,6 +360,7 @@ void updateInput()
 		printString("Error test", 4, 17, 7, !testSpeed && state ? 4 : 1);
 		printString("Speed test", 20, 17, 7, testSpeed && state ? 4 : 1);
 	}
+	// check if we need to reboot
 	if (keys & KEY_START)
 	{
 		SYSCALL(0x26);
@@ -449,7 +453,6 @@ int main()
 			printChars('#', nrOfDash, 18, 0, 1, 15);
 			printChars(' ', 12 - nrOfDash, 18 + nrOfDash, 0, 1, 15);
 		}
-		//Video::waitForVblank(true);
 	} while (true);
 	return 0;
 }
