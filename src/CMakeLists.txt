@@ -3,11 +3,19 @@ cmake_minimum_required(VERSION 3.1.0)
 # Use GBA-demo-framework toolchain
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_LIST_DIR}/GBA-demo-framework/3ds-cmake/DevkitArmGBA.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/GBA-demo-framework/3ds-cmake/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/GBA-demo-framework/cmake)
 
 project(MemTestGBA)
 
 # Include the demo framework
 add_subdirectory(GBA-demo-framework)
+
+# ASM must be enabled to support .S files
+enable_language(ASM)
+# Include all the macros and tools needed for GBA development
+include(ToolsGBA)
+# Using some special compiler flags for GBA
+include(CompilerFlagsGBA)
 
 # List all the source files in our directory
 LIST(APPEND SOURCE_FILES
