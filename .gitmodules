@@ -1,3 +1,3 @@
-[submodule "src/GBA-demo-framework"]
-	path = src/GBA-demo-framework
-	url = https://github.com/HorstBaerbel/GBA-demo-framework.git
+[submodule "src/3ds-cmake"]
+	path = src/3ds-cmake
+	url = https://github.com/Xtansia/3ds-cmake.git
