@@ -11,6 +11,38 @@
 namespace Memory
 {
 
+	// Fixed amount of memory in IWRAM and EWRAM allocated here
+	constexpr uint32_t IWRAM_ALLOC_SIZE = 24 * 1024;
+	constexpr uint32_t EWRAM_ALLOC_SIZE = 240 * 1024;
+	extern uint8_t IWRAM_BLOCK[IWRAM_ALLOC_SIZE] IWRAM_DATA;
+	extern uint8_t EWRAM_BLOCK[EWRAM_ALLOC_SIZE] EWRAM_DATA;
+
+	/// @brief Register for Game Pak SRAM and ROM wait states
+	inline auto &RegWaitCnt{*reinterpret_cast<volatile uint16_t *>(REG_BASE + 0x0204)};
+
+	/// @brief Minimum wait states possible for Game Pak SRAM and ROM
+	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
+	constexpr uint16_t WaitCntFast = 0x46DA;
+
+	/// @brief Regular wait states possible for Game Pak SRAM and ROM
+	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
+	constexpr uint16_t WaitCntNormal = 0x4317;
+
+	/// @brief Register for EWRAM wait states
+	inline auto &RegWaitEwram{*reinterpret_cast<volatile uint32_t *>(REG_BASE + 0x0800)};
+
+	/// @brief Wait states for EWRAM that crash the GBA (1/1/2)
+	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
+	constexpr uint32_t WaitEwramLudicrous = 0x0F000020;
+
+	/// @brief Minimum wait states possible for EWRAM (2/2/4)
+	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
+	constexpr uint32_t WaitEwramFast = 0x0E000020;
+
+	/// @brief Regular wait states possible for EWRAM (3/3/6)
+	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
+	constexpr uint32_t WaitEwramNormal = 0x0D000020;
+
 	// PLEASE NOTE: We're on ARM, so word means 32-bits, half-word means 16-bit!
 
 	/// @brief Copy dwords from source to destination.

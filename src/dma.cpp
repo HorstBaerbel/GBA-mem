@@ -30,7 +30,7 @@ namespace DMA
 #define DMA_IRQ (1 << 14)
 #define DMA_ENABLE (1 << 15)
 
-    uint32_t DMAFillTempValue;
+    static uint32_t DMAFillTempValue;
 
     /*//! General DMA transfer macro
 #define DMA_TRANSFER(_destination, _source, count, channel, mode) \
@@ -44,22 +44,29 @@ namespace DMA
     } while (0)
     */
 
-    void dma_fill32(void *destination, uint32_t value, uint16_t nrOfWords, uint16_t channel, uint16_t mode)
+    void dma_fill32(void *destination, uint32_t value, uint16_t nrOfWords)
     {
-        //while (REG_DMA[channel].count & DMA_ENABLE) {} // wait for previous transfer
+        // wait for previous transfer to finish
+        while (REG_DMA[3].mode & DMA_ENABLE)
+        {
+        }
         DMAFillTempValue = value;
-        REG_DMA[channel].source = reinterpret_cast<const void *>(&DMAFillTempValue);
-        REG_DMA[channel].destination = reinterpret_cast<void *>(destination);
-        REG_DMA[channel].count = nrOfWords;
-        REG_DMA[channel].mode = mode | DMA32 | DMA_SRC_FIXED | DMA_ENABLE;
+        REG_DMA[3].source = reinterpret_cast<const void *>(&DMAFillTempValue);
+        REG_DMA[3].destination = reinterpret_cast<void *>(destination);
+        REG_DMA[3].count = nrOfWords;
+        REG_DMA[3].mode = 0 | DMA32 | DMA_SRC_FIXED | DMA_ENABLE;
     }
 
-    void dma_copy32(void *destination, const uint32_t *source, uint16_t nrOfWords, uint16_t channel, uint16_t mode)
+    void dma_copy32(void *destination, const uint32_t *source, uint16_t nrOfWords)
     {
-        REG_DMA[channel].source = reinterpret_cast<const void *>(source);
-        REG_DMA[channel].destination = reinterpret_cast<void *>(destination);
-        REG_DMA[channel].count = nrOfWords;
-        REG_DMA[channel].mode = mode | DMA32 | DMA_SRC_INC | DMA_ENABLE;
+        // wait for previous transfer to finish
+        while (REG_DMA[3].mode & DMA_ENABLE)
+        {
+        }
+        REG_DMA[3].source = reinterpret_cast<const void *>(source);
+        REG_DMA[3].destination = reinterpret_cast<void *>(destination);
+        REG_DMA[3].count = nrOfWords;
+        REG_DMA[3].mode = 0 | DMA32 | DMA_SRC_INC | DMA_ENABLE;
     }
 
 } // namespace DMA

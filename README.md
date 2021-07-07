@@ -61,7 +61,7 @@ You can use the [MemTestGBA binary](MemTestGBA.gba) to test stability and perfor
     </span>
 </p>
 
-It will test the EWRAM read / write speed and IWRAM⟷EWRAM copy speed (startup default, Button **A**). Memory is copied in 16kB blocks, so this is not the max. speed possible, but gives a ballpark number. You can also test the memory for errors ([Memtest86+](http://www.memtest.org/)-like, Button **B**). **L** and **R** let you increase or decrease the EWRAM timings and **START** reboots the GBA. The source code can be found in the [src](src) directory.
+It will test the EWRAM read / write speed and IWRAM⟷EWRAM copy speed (startup default, Button **A**). Memory is copied in 24kB blocks, so this is not the max. speed possible, but gives a ballpark number. You can also test the memory for errors ([Memtest86+](http://www.memtest.org/)-like, Button **B**). **L** and **R** let you increase or decrease the EWRAM timings and **START** reboots the GBA. The source code can be found in the [src](src) directory.
 
 # How to build the test binary?
 
@@ -89,5 +89,6 @@ make -j $(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
 
 # License
 
-If you want to build your own soft- or hardware based on this, you can. See the [MIT LICENSE](LICENSE).
-The "Modern DOS" 8x8 font is from [Jayvee Enaguas](https://notabug.org/HarvettFox96/ttf-moderndos) and used by [CC0](https://notabug.org/HarvettFox96/ttf-moderndos/src/master/LICENSE).
+If you want to build your own soft- or hardware based on this, you can. See the [MIT LICENSE](LICENSE).  
+The "Modern DOS" 8x8 font is from [Jayvee Enaguas](https://notabug.org/HarvettFox96/ttf-moderndos) and used by [CC0](https://notabug.org/HarvettFox96/ttf-moderndos/src/master/LICENSE).  
+The CMake build scripts / toolchain is from [Thomas Farr](https://github.com/Xtansia/3ds-cmake) and uses the [MIT LICENSE](3ds-cmake/LICENSE).

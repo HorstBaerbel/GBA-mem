@@ -1,0 +1,7 @@
+{
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "disasexpl.associations": {
+        "**/*.c": "${workspaceFolder}build/CMakeFiles/MemTestGBA.elf.dir/${relativeFileDir}/${fileBasename}.s",
+        "**/*.cpp": "${workspaceFolder}/build/CMakeFiles/MemTestGBA.elf.dir/${relativeFileDir}/${fileBasename}.s"
+    }
+}

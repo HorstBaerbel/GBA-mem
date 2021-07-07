@@ -2,6 +2,8 @@
 #include <gba_video.h>
 #include <gba_input.h>
 #include <gba_timers.h>
+#include <gba_interrupt.h>
+#include <gba_systemcalls.h>
 
 #include "dma.h"
 #include "itoa.h"
@@ -9,25 +11,25 @@
 #include "tiles.h"
 #include "./data/font_8x8.h"
 
-struct TestConfig
+struct alignas(4) TestConfig
 {
-	uint8_t *dest;
-	uint32_t destSize;
-	const uint8_t *src;
-	uint32_t srcSize;
+	uint8_t *dest = nullptr;
+	uint32_t destSize = 0;
+	const uint8_t *src = nullptr;
+	uint32_t srcSize = 0;
 };
 
-struct SpeedResult
+struct alignas(4) SpeedResult
 {
-	int32_t readTime;
-	int32_t writeTime;
-	int32_t setTime;
-	int32_t setDMATime;
-	int32_t copyToTime;
-	int32_t copyFromTime;
-	int32_t copyToDMATime;
-	int32_t copyFromDMATime;
-	uint32_t bytesPerTest;
+	int32_t readTime = 0;
+	int32_t writeTime = 0;
+	int32_t setTime = 0;
+	int32_t setDMATime = 0;
+	int32_t copyToTime = 0;
+	int32_t copyFromTime = 0;
+	int32_t copyToDMATime = 0;
+	int32_t copyFromDMATime = 0;
+	uint32_t bytesPerTest = 0;
 };
 
 // define all functions here, so we can put them into IWRAM
@@ -36,77 +38,29 @@ uint16_t printChars(char c, uint16_t n, uint16_t x, uint16_t y, uint16_t backCol
 uint16_t printString(const char *s, uint16_t x, uint16_t y, uint16_t backColor = 0, uint16_t textColor = 15) IWRAM_CODE;
 void printValue(uint32_t value, uint32_t base, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor) IWRAM_CODE;
 void printSpeed(int32_t time, uint32_t bytes, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor) IWRAM_CODE;
-void copyBlockwise(const TestConfig &config) IWRAM_CODE;
-void copyBlockwiseDMA(const TestConfig &config) IWRAM_CODE;
-void readBlockwise(const TestConfig &config) IWRAM_CODE;
-void writeBlockwise(const TestConfig &config) IWRAM_CODE;
-int32_t runFunction(void (*func)(const TestConfig &), uint32_t nrOfCycles) IWRAM_CODE;
+template <typename F>
+void runBlockwise(F func, const TestConfig &config) IWRAM_CODE;
+void readBlock(void *source, uint32_t value, uint32_t nrOfWords) IWRAM_CODE;
+void writeBlock(void *destination, uint32_t value, uint32_t nrOfWords) IWRAM_CODE;
+template <typename F>
+int32_t runFunctionBlockwise(F func, const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
+template <typename F>
+int32_t runFunction(F func, const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
 SpeedResult runSpeedTest(const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
 uint32_t testPattern(uint32_t index) IWRAM_CODE;
 uint32_t runErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pattern) IWRAM_CODE;
 int32_t getTime() IWRAM_CODE;
 void updateTime() IWRAM_CODE;
-void updateState() IWRAM_CODE;
+void updateBlinkState() IWRAM_CODE;
 void updateInput() IWRAM_CODE;
 int main() IWRAM_CODE;
 
-static char printBuffer[256] = {0};
-
 // ------------------------------------------------------------------------------------------------
 
-void printChar(char c, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
-{
-	uint16_t tileNo = static_cast<uint16_t>(c) - 32;
-	uint32_t tileIndex = ((y & 31) * 32) + (x & 31);
-	auto background = Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_1000);
-	background[tileIndex] = 95 | ((backColor & 15) << 12);
-	auto text = Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_2000);
-	text[tileIndex] = tileNo | ((textColor & 15) << 12);
-}
+static volatile uint32_t rwdummy;
 
-uint16_t printChars(char c, uint16_t n, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
-{
-	uint16_t nrOfCharsPrinted = 0;
-	for (uint32_t i = 0; i < n; i++)
-	{
-		printChar(c, x++, y, backColor, textColor);
-		nrOfCharsPrinted++;
-	}
-	return nrOfCharsPrinted;
-}
-
-uint16_t printString(const char *s, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
-{
-	uint16_t nrOfCharsPrinted = 0;
-	if (s != nullptr)
-	{
-		while (*s != '\0')
-		{
-			printChar(*s, x++, y, backColor, textColor);
-			s++;
-			nrOfCharsPrinted++;
-		}
-	}
-	return nrOfCharsPrinted;
-}
-
-void printValue(uint32_t value, uint32_t base, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
-{
-	itoa(value, printBuffer, base);
-	printString(printBuffer, x, y, backColor, textColor);
-}
-
-void printSpeed(int32_t time, uint32_t bytes, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
-{
-	auto MBperS = ((bytes / 1024) / time) / 1024;
-	fptoa(MBperS.raw(), printBuffer, decltype(MBperS)::BITSF, 2);
-	auto valueLength = printString(printBuffer, x, y, backColor, textColor);
-	printString(" MB/s ", x + valueLength, y, backColor, textColor);
-}
-
-// ------------------------------------------------------------------------------------------------
-
-void copyBlockwise(const TestConfig &config)
+template <typename F>
+void runBlockwise(F func, const TestConfig &config)
 {
 	if (config.srcSize < config.destSize)
 	{
@@ -114,7 +68,7 @@ void copyBlockwise(const TestConfig &config)
 		auto d = config.dest;
 		for (uint32_t i = 0; i < nrOfBlocks; i++)
 		{
-			Memory::memcpy32(d, config.src, config.srcSize >> 2);
+			func(d, reinterpret_cast<const uint32_t *>(config.src), config.srcSize >> 2);
 			d += config.srcSize;
 		}
 	}
@@ -124,74 +78,58 @@ void copyBlockwise(const TestConfig &config)
 		auto s = config.src;
 		for (uint32_t i = 0; i < nrOfBlocks; i++)
 		{
-			Memory::memcpy32(config.dest, s, config.destSize >> 2);
+			func(config.dest, reinterpret_cast<const uint32_t *>(s), config.destSize >> 2);
 			s += config.destSize;
 		}
 	}
 	else
 	{
-		Memory::memcpy32(config.dest, config.src, config.srcSize >> 2);
+		func(config.dest, reinterpret_cast<const uint32_t *>(config.src), config.srcSize >> 2);
 	}
 }
 
-void copyBlockwiseDMA(const TestConfig &config)
+void readBlock(void *source, uint32_t value, uint32_t nrOfWords)
 {
-	if (config.srcSize < config.destSize)
+	uint32_t v = value;
+	auto src32 = reinterpret_cast<const uint32_t *>(source);
+	for (uint32_t i = 0; i < nrOfWords; i++)
 	{
-		const uint32_t nrOfBlocks = config.destSize / config.srcSize;
-		auto d = config.dest;
-		for (uint32_t i = 0; i < nrOfBlocks; i++)
-		{
-			DMA::dma_copy32(d, reinterpret_cast<const uint32_t *>(config.src), config.srcSize >> 2);
-			d += config.srcSize;
-		}
+		v += src32[i];
 	}
-	else if (config.srcSize > config.destSize)
-	{
-		const uint32_t nrOfBlocks = config.srcSize / config.destSize;
-		auto s = config.src;
-		for (uint32_t i = 0; i < nrOfBlocks; i++)
-		{
-			DMA::dma_copy32(config.dest, reinterpret_cast<const uint32_t *>(s), config.destSize >> 2);
-			s += config.destSize;
-		}
-	}
-	else
-	{
-		DMA::dma_copy32(config.dest, reinterpret_cast<const uint32_t *>(config.src), config.srcSize >> 2);
-	}
+	rwdummy = v;
 }
 
-void readBlockwise(const TestConfig &config)
+void writeBlock(void *destination, uint32_t value, uint32_t nrOfWords)
 {
-	volatile uint32_t v;
-	auto count = config.srcSize >> 2;
-	auto src32 = reinterpret_cast<const uint32_t *>(config.src);
-	for (uint32_t i = 0; i < count; i++)
+	uint32_t v = value;
+	auto dest32 = reinterpret_cast<uint32_t *>(destination);
+	for (uint32_t i = 0; i < nrOfWords; i++)
 	{
-		v = src32[i];
+		dest32[i] = v++;
 	}
-}
-
-void writeBlockwise(const TestConfig &config)
-{
-	volatile uint32_t v = 0x12345678;
-	auto count = config.destSize >> 2;
-	auto dest32 = reinterpret_cast<uint32_t *>(config.dest);
-	for (uint32_t i = 0; i < count; i++)
-	{
-		dest32[i] = v;
-	}
+	rwdummy = v;
 }
 
 // ------------------------------------------------------------------------------------------------
 
-int32_t runFunction(void (*func)(const TestConfig &), uint32_t nrOfCycles)
+template <typename F>
+int32_t runFunctionBlockwise(F func, const TestConfig &config, uint32_t nrOfCycles)
 {
 	auto startTime = getTime();
 	for (uint32_t cycle = 0; cycle < nrOfCycles; cycle++)
 	{
-		func(config);
+		runBlockwise(func, config);
+	}
+	return getTime() - startTime;
+}
+
+template <typename F>
+int32_t runFunction(F func, const TestConfig &config, uint32_t nrOfCycles)
+{
+	auto startTime = getTime();
+	for (uint32_t cycle = 0; cycle < nrOfCycles; cycle++)
+	{
+		func(config.dest, 0x12345678, config.destSize >> 2);
 	}
 	return getTime() - startTime;
 }
@@ -199,26 +137,16 @@ int32_t runFunction(void (*func)(const TestConfig &), uint32_t nrOfCycles)
 SpeedResult runSpeedTest(const TestConfig &config, uint32_t nrOfCycles)
 {
 	SpeedResult result = {0, 0, 0, 0, 0, 0, 0, 0, config.destSize * nrOfCycles};
-	TestConfig to = config;
+	auto to = config;
+	result.readTime = runFunction(readBlock, to, nrOfCycles);
+	result.writeTime = runFunction(writeBlock, to, nrOfCycles);
+	result.setTime = runFunction(Memory::memset32, to, nrOfCycles);
+	result.setDMATime = runFunction(DMA::dma_fill32, to, nrOfCycles);
 	TestConfig from = {const_cast<uint8_t *>(config.src), config.srcSize, config.dest, config.destSize};
-	result.readTime = runFunction(readBlockwise, from);
-	result.writeTime = runFunction(writeBlockwise, to);
-	auto startTime = getTime();
-	for (uint32_t cycle = 0; cycle < nrOfCycles; cycle++)
-	{
-		Memory::memset32(config.dest, 0x12345678, config.destSize >> 2);
-	}
-	result.setTime = getTime() - startTime;
-	startTime = getTime();
-	for (uint32_t cycle = 0; cycle < nrOfCycles; cycle++)
-	{
-		DMA::dma_fill32(config.dest, 0x12345678, config.destSize >> 2);
-	}
-	result.setDMATime = getTime() - startTime;
-	result.copyFromTime = runFunction(copyBlockwise, from);
-	result.copyToTime = runFunction(copyBlockwise(to);
-	result.copyFromDMATime = runFunction(copyBlockwiseDMA(from);
-	result.copyToDMATime = runFunction(copyBlockwiseDMA(to);
+	result.copyFromTime = runFunctionBlockwise(Memory::memcpy32, from, nrOfCycles);
+	result.copyToTime = runFunctionBlockwise(Memory::memcpy32, to, nrOfCycles);
+	result.copyFromDMATime = runFunctionBlockwise(DMA::dma_copy32, from, nrOfCycles);
+	result.copyToDMATime = runFunctionBlockwise(DMA::dma_copy32, to, nrOfCycles);
 	return result;
 }
 
@@ -276,42 +204,92 @@ uint32_t runErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pa
 
 // ------------------------------------------------------------------------------------------------
 
-static bool state = false;
-static bool testSpeed = true;
-static uint32_t waitStateIndex = 0;
-static const uint32_t WaitStates[] = {WaitEwramNormal, WaitEwramFast, WaitEwramLudicrous};
-static const char *WaitStateStrings[] = {"3/3/6", "2/2/4", "1/1/2"};
-static const char *WaitStateOptionStrings[] = {"                (R) Timings --", "(L) Timings ++  (R) Timings --", "(L) Timings ++                "};
-constexpr uint32_t CyclesSpeed = 8;
-constexpr uint32_t CyclesErrors = 4;
-static const uint16_t COLORS[16] = {0, 0x5000, 0x280, 0x5280, 0x0014, 0x5014, 0x0154, 0x5294, 0x294a, 0x7d4a, 0x2bea, 0x7fea, 0x295f, 0x7d5f, 0x2bff, 0x7fff};
+static char printBuffer[32] = {0};
 
-#define IWRAM_ALLOC_SIZE (16 * 1024)
-#define EWRAM_ALLOC_SIZE (160 * 1024)
-alignas(4) uint8_t MemoryIWRAM[IWRAM_ALLOC_SIZE] IWRAM_DATA;
-alignas(4) uint8_t MemoryEWRAM[EWRAM_ALLOC_SIZE] EWRAM_DATA;
-static const TestConfig testConfig = {MemoryEWRAM, EWRAM_ALLOC_SIZE, MemoryIWRAM, IWRAM_ALLOC_SIZE};
+void printChar(char c, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
+{
+	uint16_t tileNo = static_cast<uint16_t>(c) - 32;
+	uint32_t tileIndex = ((y & 31) * 32) + (x & 31);
+	auto background = Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_1000);
+	background[tileIndex] = 95 | ((backColor & 15) << 12);
+	auto text = Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_2000);
+	text[tileIndex] = tileNo | ((textColor & 15) << 12);
+}
 
-constexpr int32_t TimerIncrement = 328; // 65536/328=200 -> 1/200=5ms
-static int32_t time = 0;				// current wall clock in s in 16.16 format
+uint16_t printChars(char c, uint16_t n, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
+{
+	uint16_t nrOfCharsPrinted = 0;
+	for (uint32_t i = 0; i < n; i++)
+	{
+		printChar(c, x++, y, backColor, textColor);
+		nrOfCharsPrinted++;
+	}
+	return nrOfCharsPrinted;
+}
+
+uint16_t printString(const char *s, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
+{
+	uint16_t nrOfCharsPrinted = 0;
+	if (s != nullptr)
+	{
+		while (*s != '\0')
+		{
+			printChar(*s, x++, y, backColor, textColor);
+			s++;
+			nrOfCharsPrinted++;
+		}
+	}
+	return nrOfCharsPrinted;
+}
+
+void printValue(uint32_t value, uint32_t base, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
+{
+	itoa(value, printBuffer, base);
+	printString(printBuffer, x, y, backColor, textColor);
+}
+
+void printSpeed(int32_t time, uint32_t bytes, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
+{
+	int32_t MBperS = ((int64_t)bytes << 4) / ((int64_t)time);
+	fptoa(MBperS, printBuffer, 8, 2);
+	auto valueLength = printString(printBuffer, x, y, backColor, textColor);
+	printString(" MB/s ", x + valueLength, y, backColor, textColor);
+}
+
+// ------------------------------------------------------------------------------------------------
+
+static bool blinkState{false};
+static bool testSpeed{true};
+static uint32_t waitStateIndex{0};
+static const uint32_t WaitStates[]{Memory::WaitEwramNormal, Memory::WaitEwramFast, Memory::WaitEwramLudicrous};
+static const char *WaitStateStrings[]{"3/3/6", "2/2/4", "1/1/2"};
+static const char *WaitStateOptionStrings[]{"                (R) Timings --", "(L) Timings ++  (R) Timings --", "(L) Timings ++                "};
+constexpr uint32_t CyclesSpeed{8};
+constexpr uint32_t CyclesErrors{4};
+static const uint16_t COLORS[16]{0, 0x5000, 0x280, 0x5280, 0x0014, 0x5014, 0x0154, 0x5294, 0x294a, 0x7d4a, 0x2bea, 0x7fea, 0x295f, 0x7d5f, 0x2bff, 0x7fff};
+
+static const TestConfig testConfig{Memory::EWRAM_BLOCK, Memory::EWRAM_ALLOC_SIZE, Memory::IWRAM_BLOCK, Memory::IWRAM_ALLOC_SIZE};
+
+constexpr int32_t TimerIncrement{328}; // 65536/328=200 -> 1/200=5ms
+static int32_t TimerTicks{0};		   // current wall clock in s in 16.16 format
 
 int32_t getTime()
 {
-	return time;
+	return TimerTicks;
 }
 
 void updateTime()
 {
-	time += TimerIncrement;
+	TimerTicks += TimerIncrement;
 }
 
-void updateState()
+void updateBlinkState()
 {
 	// blink UI elements
-	state = !state;
-	printChar('+', 10, 0, 2, state ? 4 : 0);
-	printString("Error test", 4, 17, 7, !testSpeed && state ? 4 : 1);
-	printString("Speed test", 20, 17, 7, testSpeed && state ? 4 : 1);
+	blinkState = !blinkState;
+	printChar('+', 10, 0, 2, blinkState ? 4 : 0);
+	printString("Error test", 4, 17, 7, !testSpeed && blinkState ? 4 : 1);
+	printString("Speed test", 20, 17, 7, testSpeed && blinkState ? 4 : 1);
 }
 
 void updateInput()
@@ -330,7 +308,7 @@ void updateInput()
 	}
 	if (waitStateIndex != waitStateIndexBefore)
 	{
-		RegWaitEwram = WaitStates[waitStateIndex];
+		Memory::RegWaitEwram = WaitStates[waitStateIndex];
 		printString(WaitStateStrings[waitStateIndex], 15, 3, 1, 15);
 		printString(WaitStateOptionStrings[waitStateIndex], 0, 18, 7, 1);
 	}
@@ -346,21 +324,21 @@ void updateInput()
 	}
 	if (testSpeed != testSpeedBefore)
 	{
-		printString("Error test", 4, 17, 7, !testSpeed && state ? 4 : 1);
-		printString("Speed test", 20, 17, 7, testSpeed && state ? 4 : 1);
+		printString("Error test", 4, 17, 7, !testSpeed && blinkState ? 4 : 1);
+		printString("Speed test", 20, 17, 7, testSpeed && blinkState ? 4 : 1);
 	}
 	// check if we need to reboot
 	if (keys & KEY_START)
 	{
-		SYSCALL(0x26);
+		SystemCall(0x26);
 	}
 }
 
 int main()
 {
 	// set default waitstates for GamePak ROM and EWRAM
-	RegWaitCnt = WaitCntFast;
-	RegWaitEwram = WaitEwramNormal;
+	Memory::RegWaitCnt = Memory::WaitCntFast;
+	Memory::RegWaitEwram = Memory::WaitEwramNormal;
 	// set graphics to mode 0 and enable background 2
 	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON;
 	// copy data to tile map
@@ -397,18 +375,18 @@ int main()
 	// start wall clock
 	irqInit();
 	// set up time to increase time every ~5ms
-	irqSet(IRQMask::IRQ_TIMER3, updateTime);
-	irqEnable(IRQMask::IRQ_TIMER3);
-	REG_TM2CNT_L = 65536 - TimerIncrement;
-	REG_TM2CNT_H = TIMER_START | TIMER_IRQ | 2;
+	irqSet(irqMASKS::IRQ_TIMER3, updateTime);
+	irqEnable(irqMASKS::IRQ_TIMER3);
+	REG_TM3CNT_L = 65536 - TimerIncrement;
+	REG_TM3CNT_H = TIMER_START | TIMER_IRQ | 2;
 	// set up timer to call function every 1s
-	irqSet(IRQMask::IRQ_TIMER2, updateState);
-	irqEnable(IRQMask::IRQ_TIMER2);
+	irqSet(irqMASKS::IRQ_TIMER2, updateBlinkState);
+	irqEnable(irqMASKS::IRQ_TIMER2);
 	REG_TM2CNT_L = 65536 - 16384;
 	REG_TM2CNT_H = TIMER_START | TIMER_IRQ | 3;
 	// set up timer to call function every 150ms
-	irqSet(IRQMask::IRQ_TIMER1, updateInput);
-	irqEnable(IRQMask::IRQ_TIMER1);
+	irqSet(irqMASKS::IRQ_TIMER1, updateInput);
+	irqEnable(irqMASKS::IRQ_TIMER1);
 	REG_TM1CNT_L = 65536 - 2458;
 	REG_TM1CNT_H = TIMER_START | TIMER_IRQ | 3;
 	// set up some variables

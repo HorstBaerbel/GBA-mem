@@ -16,7 +16,12 @@ include(CompilerFlagsGBA)
 
 # List all the source files in our directory
 LIST(APPEND SOURCE_FILES
-	./main.cpp
+	dma.cpp
+	itoa.cpp
+	main.cpp
+	memcpy.s
+	memory.cpp
+	memset.s
 )
 
 LIST(APPEND EXTRA_SRC_FILES
@@ -37,7 +42,6 @@ LIST(APPEND TARGET_LIB_DIRS
 
 LIST(APPEND TARGET_LIBS
 	gba
-    gbafw
 )
 
 link_directories(${TARGET_LIB_DIRS})
