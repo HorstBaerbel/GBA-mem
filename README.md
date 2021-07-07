@@ -56,7 +56,7 @@ You can use the [MemTestGBA binary](MemTestGBA.gba) to test stability and perfor
 </p>
 
 It will test the EWRAM read / write speed and IWRAM⟷EWRAM copy speed (startup default, Button **A**). Memory is copied in 24kB blocks, so this is not the max. speed possible, but gives a ballpark number. You can also test the memory for errors ([Memtest86+](http://www.memtest.org/)-like, Button **B**). Buttons **L** and **R** let you increase or decrease the EWRAM timings and **START** reboots the GBA. The source code can be found in the [src](src) directory.  
-Theoretical SRAM access speed should be: Clock speed * 2 (16 bit SRAM width) / (1 + wait states) ⟷ 16*1024*1024 * 2 / (1 + w) = 10.6 MB/s (default 2 wait states) and 32 MB/s (0 wait states).
+**Theoretical** SRAM transfer speeds should be: Clock speed * 2 (16 bit SRAM width) / (1 + wait states) ⟷ 16 * 1024 * 1024 * 2 / (1 + w) = 10.6 MB/s (default 2 wait states) and 32 MB/s (0 wait states).
 
 ## How to build the test binary?
 
