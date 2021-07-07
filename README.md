@@ -1,9 +1,3 @@
-!!! WORK IN PROGRESS !!!  
-
-!!! WORK IN PROGRESS !!!  
-
-!!! WORK IN PROGRESS !!!  
-
 # Game Boy Advance faster EWRAM hack
 
 The GBA has 256kB of external work RAM in the form of an 128kx16 SRAM chip with 70ns (M68AS128DL70N6), 85ns ([μPD442012AGY-BB85X-MJH](http://www.dexsilicium.com/Nec_D442012AGY.pdf)), or even 120ns ([HY62LF16206A-LT12C](https://www.alldatasheet.com/datasheet-pdf/pdf/96180/HYNIX/HY62LF16206A.html)) access time, depending on the chip (good hardware database [here](https://gbhwdb.gekkio.fi/consoles/agb/)). The regular EWRAM wait states are 3/3/6 clock cycles (for 1/2/4 bytes of data). Setting the [undocumented EWRAM wait states flags](http://problemkaputt.de/gbatek.htm#gbasystemcontrol) to 0Eh allows you to speed up EWRAM access to 1 wait state (2/2/4 clock cycles). Setting it to 0Fh will crash / lock up the GBA though, because 0 wait states are out of the specs of all SRAM chips ever used in the GBA / GBA SP and GBA Micro (access times must be < 62ns) and EWRAM gets corrupted (see [testing memory](#testing-memory)). The choice of SRAM chips back in 2000 was probably due availability and keeping the system costs down, but 20 years later there are cheap SRAM chips available with as low as 10ns access time, so...
@@ -41,7 +35,7 @@ The power draw of the replacement chips seems to be comparable to that of the or
 
 The [KiCad](KiCad) directory contains the schematics and PCB layout and also gerber files (exported for JLPCB). I chose [JLPCB](https://jlcpcb.com) as a manufacturer in this case and a board thickness of 0.8mm. Remember to get a stencil made for both sides.
 
-## Soldering
+### Soldering
 
 I opted for [ChipQuik Sn42/Bi58 TS391LT](https://www.amazon.de/gp/product/B0195V1QEI) solder paste because of its low melting point of 138°C. This makes it easier to solder and you need to heat up the GBA mainboard less. You can 3D-print a [PCB holder](STL/PCB_holder.stl) for the PCB to apply solder paste with the stencil:
 
@@ -61,11 +55,11 @@ You can use the [MemTestGBA binary](MemTestGBA.gba) to test stability and perfor
     </span>
 </p>
 
-It will test the EWRAM read / write speed and IWRAM⟷EWRAM copy speed (startup default, Button **A**). Memory is copied in 24kB blocks, so this is not the max. speed possible, but gives a ballpark number. You can also test the memory for errors ([Memtest86+](http://www.memtest.org/)-like, Button **B**). **L** and **R** let you increase or decrease the EWRAM timings and **START** reboots the GBA. The source code can be found in the [src](src) directory.
+It will test the EWRAM read / write speed and IWRAM⟷EWRAM copy speed (startup default, Button **A**). Memory is copied in 24kB blocks, so this is not the max. speed possible, but gives a ballpark number. You can also test the memory for errors ([Memtest86+](http://www.memtest.org/)-like, Button **B**). Buttons **L** and **R** let you increase or decrease the EWRAM timings and **START** reboots the GBA. The source code can be found in the [src](src) directory.
 
-# How to build the test binary?
+## How to build the test binary?
 
-## From the command line
+### From the command line
 
 * You **must** have [CMake](https://cmake.org/) 3.1.0 or higher, [devkitPro / devKitARM](https://devkitpro.org) r52-1 or higher [installed](https://devkitpro.org/wiki/Getting_Started).
 * Navigate to the [src](src) folder, then:
@@ -76,7 +70,7 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j $(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
 ```
 
-## From Visual Studio Code
+### From Visual Studio Code
 
 * You **must** have [CMake](https://cmake.org/), [devkitPro / devKitARM](https://devkitpro.org) r52-1 or higher [installed](https://devkitpro.org/wiki/Getting_Started).
 * **Must**: Install the "C/C++ extension" by Microsoft.
@@ -87,7 +81,7 @@ make -j $(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
 * Choose "Unspecified" as your active CMake kit if asked. It then should be autodetected correctly.
 * You should be able to build now using F7 and build + run using F5.
 
-# License
+## License
 
 If you want to build your own soft- or hardware based on this, you can. See the [MIT LICENSE](LICENSE).  
 The "Modern DOS" 8x8 font is from [Jayvee Enaguas](https://notabug.org/HarvettFox96/ttf-moderndos) and used by [CC0](https://notabug.org/HarvettFox96/ttf-moderndos/src/master/LICENSE).  
