@@ -270,7 +270,7 @@ static const uint16_t COLORS[16]{0, 0x5000, 0x280, 0x5280, 0x0014, 0x5014, 0x015
 
 static const TestConfig testConfig{Memory::EWRAM_BLOCK, Memory::EWRAM_ALLOC_SIZE, Memory::IWRAM_BLOCK, Memory::IWRAM_ALLOC_SIZE};
 
-constexpr int32_t TimerIncrement{328}; // 65536/328=200 -> 1/200=5ms
+constexpr int32_t TimerIncrement{164}; // 65536/164=400 -> 1/400=2.5ms
 static int32_t TimerTicks{0};		   // current wall clock in s in 16.16 format
 
 int32_t getTime()

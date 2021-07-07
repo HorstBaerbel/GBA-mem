@@ -52,9 +52,9 @@ namespace DMA
         }
         DMAFillTempValue = value;
         REG_DMA[3].source = reinterpret_cast<const void *>(&DMAFillTempValue);
-        REG_DMA[3].destination = reinterpret_cast<void *>(destination);
+        REG_DMA[3].destination = destination;
         REG_DMA[3].count = nrOfWords;
-        REG_DMA[3].mode = 0 | DMA32 | DMA_SRC_FIXED | DMA_ENABLE;
+        REG_DMA[3].mode = DMA32 | DMA_DST_INC | DMA_SRC_FIXED | DMA_ENABLE;
     }
 
     void dma_copy32(void *destination, const uint32_t *source, uint16_t nrOfWords)
@@ -64,9 +64,9 @@ namespace DMA
         {
         }
         REG_DMA[3].source = reinterpret_cast<const void *>(source);
-        REG_DMA[3].destination = reinterpret_cast<void *>(destination);
+        REG_DMA[3].destination = destination;
         REG_DMA[3].count = nrOfWords;
-        REG_DMA[3].mode = 0 | DMA32 | DMA_SRC_INC | DMA_ENABLE;
+        REG_DMA[3].mode = DMA32 | DMA_DST_INC | DMA_SRC_INC | DMA_ENABLE;
     }
 
 } // namespace DMA
