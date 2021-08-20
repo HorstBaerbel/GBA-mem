@@ -47,7 +47,7 @@ I opted for [ChipQuik Sn42/Bi58 TS391LT](https://www.amazon.de/gp/product/B0195V
 
 ## Testing memory
 
-You can use the [MemTestGBA binary](MemTestGBA.gba) to test stability and performance:
+You can use the [MemTestGBA binary](MemTestGBA.gba) to test stability and performance (on a REAL GBA, [NOT on the DS / DSi](http://problemkaputt.de/gbatek.htm#gbasystemcontrol)):
 
 <p align="center">
     <span>
@@ -62,7 +62,7 @@ It will test the EWRAM read / write speed and IWRAM⟷EWRAM copy speed (startup 
 
 ### From the command line
 
-* You **must** have [CMake](https://cmake.org/) 3.1.0 or higher, [devkitPro / devKitARM](https://devkitpro.org) r52-1 or higher [installed](https://devkitpro.org/wiki/Getting_Started).
+* You **must** have [CMake](https://cmake.org/) 3.1.0 or higher, [devkitPro / devKitARM](https://devkitpro.org) r54 or higher [installed](https://devkitpro.org/wiki/Getting_Started).
 * Navigate to the [src](src) folder, then:
 
 ```sh
@@ -73,7 +73,7 @@ make -j $(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
 
 ### From Visual Studio Code
 
-* You **must** have [CMake](https://cmake.org/), [devkitPro / devKitARM](https://devkitpro.org) r52-1 or higher [installed](https://devkitpro.org/wiki/Getting_Started).
+* You **must** have [CMake](https://cmake.org/), [devkitPro / devKitARM](https://devkitpro.org) r54 or higher [installed](https://devkitpro.org/wiki/Getting_Started).
 * **Must**: Install the "C/C++ extension" by Microsoft.
 * **Recommended**: If you want intellisense functionality install the "C++ intellisense" extension by austin.
 * **Must**: Install the "CMake Tools" extension by Microsoft.
