@@ -55,6 +55,10 @@ namespace DMA
         REG_DMA[3].destination = destination;
         REG_DMA[3].count = nrOfWords;
         REG_DMA[3].mode = DMA32 | DMA_DST_INC | DMA_SRC_FIXED | DMA_ENABLE;
+        // wait for transfer to finish
+        while (REG_DMA[3].mode & DMA_ENABLE)
+        {
+        }
     }
 
     void dma_copy32(void *destination, const uint32_t *source, uint16_t nrOfWords)
@@ -67,6 +71,10 @@ namespace DMA
         REG_DMA[3].destination = destination;
         REG_DMA[3].count = nrOfWords;
         REG_DMA[3].mode = DMA32 | DMA_DST_INC | DMA_SRC_INC | DMA_ENABLE;
+        // wait for transfer to finish
+        while (REG_DMA[3].mode & DMA_ENABLE)
+        {
+        }
     }
 
 } // namespace DMA

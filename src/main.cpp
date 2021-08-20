@@ -9,6 +9,7 @@
 #include "itoa.h"
 #include "memory.h"
 #include "tiles.h"
+
 #include "./data/font_8x8.h"
 
 struct alignas(4) TestConfig
