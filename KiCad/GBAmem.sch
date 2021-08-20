@@ -284,8 +284,6 @@ Entry Wire Line
 Entry Wire Line
 	4500 4150 4600 4050
 Entry Wire Line
-	4500 4050 4600 3950
-Entry Wire Line
 	6500 3950 6600 3850
 Entry Wire Line
 	6500 4050 6600 3950
@@ -295,8 +293,6 @@ Entry Wire Line
 	6500 4250 6600 4150
 Entry Wire Line
 	6500 4350 6600 4250
-Wire Wire Line
-	4850 3950 4600 3950
 Wire Wire Line
 	4850 4050 4600 4050
 Wire Wire Line
