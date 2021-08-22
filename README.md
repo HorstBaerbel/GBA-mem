@@ -51,7 +51,7 @@ I opted for [ChipQuik Sn42/Bi58 TS391LT](https://www.amazon.de/gp/product/B0195V
 
 ## Testing memory
 
-You can use the [MemTestGBA binary](MemTestGBA.gba) to test stability and performance (on a REAL GBA, [NOT on the DS / DSi](http://problemkaputt.de/gbatek.htm#gbasystemcontrol)):
+You can use the [MemTestGBA binary](MemTestGBA.gba) to test stability and performance (on a REAL GBA, [NOT on the DS / DSi or a GBA micro](http://problemkaputt.de/gbatek.htm#gbasystemcontrol)):
 
 <p align="center">
     <span>
