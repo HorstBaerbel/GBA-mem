@@ -1,3 +1,7 @@
+# NOTE: This killed my GBA. I'm leaving this here for academic purposes....
+
+Yes. It killed my GBA. Here be dragons 🐉!
+
 # Game Boy Advance faster EWRAM hack
 
 The GBA has 256kB of external work RAM in the form of an 128kx16 SRAM chip with 70ns (M68AS128DL70N6), 85ns ([μPD442012AGY-BB85X-MJH](http://www.dexsilicium.com/Nec_D442012AGY.pdf)), or even 120ns ([HY62LF16206A-LT12C](https://www.alldatasheet.com/datasheet-pdf/pdf/96180/HYNIX/HY62LF16206A.html)) access time, depending on the chip (good hardware database [here](https://gbhwdb.gekkio.fi/consoles/agb/)). The regular EWRAM access speed is 2 wait states (3/3/6 clock cycles) for 1/2/4 bytes of data. Setting the [undocumented EWRAM wait states flags](http://problemkaputt.de/gbatek.htm#gbasystemcontrol) to 0Eh allows you to speed up EWRAM access to 1 wait state (2/2/4 clock cycles). Setting it to 0Fh will crash / lock up the GBA though, because 0 wait states are out of the specs of all SRAM chips ever used in the GBA / GBA SP and GBA Micro (access times must be < 62ns) and EWRAM gets corrupted (see [testing memory](#testing-memory)). The choice of those SRAM chips back in 2000 was probably due availability and keeping the system costs down, but 20 years later there are cheap SRAM chips available with as low as 10ns access time, so...
@@ -24,10 +28,10 @@ Supposedly compatible SRAM chips for the board:
 
 | Model                                                                                                                    | min. access time | max. power draw | working |
 | ------------------------------------------------------------------------------------------------------------------------ | ---------------- | --------------- | ------- |
-| [IS62WV12816BLL-55TLI / -55BLI](http://www.issi.com/WW/pdf/62WV12816ALL.pdf)                                             | 55ns             | ~25mA           | ?       |
-| [IS62WV12816EBLL-45TLI](http://www.issi.com/WW/pdf/62-65WV12816EALL-BLL.pdf)                                             | 45ns             | ~15mA           | ?       |
-| [CY62136FV30LL-45ZSXIT / -45ZSXI / -45ZSXA](https://www.cypress.com/file/43866/download)                                 | 45ns             | ~18mA           | ?       |
-| [CY62136ESL-45ZSXI](https://www.mouser.de/datasheet/2/100/001-48147_CY62136ESL_MoBL_R_2-Mbit_128_K_X_16_Stat-319203.pdf) | 45ns             | ~20mA           | ?       |
+| [IS62WV12816BLL-55TLI / -55BLI](http://www.issi.com/WW/pdf/62WV12816ALL.pdf)                                             | 55ns             | ~25mA           | NO?     |
+| [IS62WV12816EBLL-45TLI](http://www.issi.com/WW/pdf/62-65WV12816EALL-BLL.pdf)                                             | 45ns             | ~15mA           | NO      |
+| [CY62136FV30LL-45ZSXIT / -45ZSXI / -45ZSXA](https://www.cypress.com/file/43866/download)                                 | 45ns             | ~18mA           | NO?     |
+| [CY62136ESL-45ZSXI](https://www.mouser.de/datasheet/2/100/001-48147_CY62136ESL_MoBL_R_2-Mbit_128_K_X_16_Stat-319203.pdf) | 45ns             | ~20mA           | NO?     |
 
 The power draw of the replacement chips seems to be comparable to that of the originals. I'd go with the IS62WV12816EBLL-45TLI if you can find it, because of the lowest power draw.
 
