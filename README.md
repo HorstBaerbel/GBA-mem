@@ -16,7 +16,7 @@ This aims to replace the GBAs SRAM chip with a faster chip on a carrier board, b
     </span>
 </p>
 
-All pins have been connected straight through, with the exception of /CS1 (/CE1) and CS2 (CE2) which are permanently connected to GND resp. 3.3V anyway according to [GBATEK](http://problemkaputt.de/gbatek.htm#pinoutscpupinouts). Also the upper byte lines (D8-D15) are swapped for better chip placement.
+All pins have been connected straight through, with the exception of /CS1 (/CE1) and CS2 (CE2) which are permanently connected to GND resp. VDD2 / 2.5V anyway according to [GBATEK](http://problemkaputt.de/gbatek.htm#pinoutscpupinouts). Also the upper byte lines (D8-D15) are swapped for better chip placement.
 
 <p align="center">
     <span>

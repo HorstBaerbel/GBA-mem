@@ -423,7 +423,7 @@ L power:+3V3 #PWR0101
 U 1 1 60DC905A
 P 7200 3350
 F 0 "#PWR0101" H 7200 3200 50  0001 C CNN
-F 1 "+3V3" H 7215 3523 50  0000 C CNN
+F 1 "+3V3" H 7215 3523 50  0001 C CNN
 F 2 "" H 7200 3350 50  0001 C CNN
 F 3 "" H 7200 3350 50  0001 C CNN
 	1    7200 3350
@@ -572,8 +572,8 @@ Wire Notes Line
 	3600 4750 3600 5350
 Wire Notes Line
 	3600 5350 4200 5350
-Text Notes 3250 2150 0    50   ~ 0
- CS# -> GND\n/CS1 -> GND\n CS2 -> 3V3
+Text Notes 3200 2150 0    50   ~ 0
+ CS# -> GND\n/CS1 -> GND\n CS2 -> VDD2 (2V5)
 Wire Notes Line
 	4050 2050 4050 3400
 Wire Notes Line
@@ -597,9 +597,9 @@ Wire Wire Line
 Wire Wire Line
 	6050 2000 7400 2000
 Wire Bus Line
-	6600 3750 6600 6150
-Wire Bus Line
 	4500 3750 4500 6150
+Wire Bus Line
+	6600 3750 6600 6150
 Wire Bus Line
 	4250 3800 4250 5550
 Wire Bus Line
@@ -608,4 +608,6 @@ Wire Bus Line
 	4500 900  4500 3750
 Wire Bus Line
 	6650 1300 6650 3800
+Text Notes 7100 3200 0    50   ~ 0
+VDD2 (2V5)
 $EndSCHEMATC
