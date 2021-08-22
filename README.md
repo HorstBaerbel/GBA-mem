@@ -1,6 +1,6 @@
-# NOTE: This killed my GBA. I'm leaving this here for academic purposes....
+# NOTE: This almost killed my GBA. I'm leaving this here for academic purposes...
 
-Yes. It killed my GBA. Here be dragons 🐉!
+Here be dragons 🐉!
 
 # Game Boy Advance faster EWRAM hack
 
