@@ -8,9 +8,7 @@
 #include "dma.h"
 #include "itoa.h"
 #include "memory.h"
-#include "tiles.h"
-
-#include "./data/font_8x8.h"
+#include "tui.h"
 
 struct alignas(4) TestConfig
 {
@@ -34,11 +32,7 @@ struct alignas(4) SpeedResult
 };
 
 // define all functions here, so we can put them into IWRAM
-void printChar(char c, uint16_t x, uint16_t y, uint16_t backColor = 0, uint16_t textColor = 15) IWRAM_CODE;
-uint16_t printChars(char c, uint16_t n, uint16_t x, uint16_t y, uint16_t backColor = 0, uint16_t textColor = 15) IWRAM_CODE;
-uint16_t printString(const char *s, uint16_t x, uint16_t y, uint16_t backColor = 0, uint16_t textColor = 15) IWRAM_CODE;
-void printValue(uint32_t value, uint32_t base, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor) IWRAM_CODE;
-void printSpeed(int32_t time, uint32_t bytes, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor) IWRAM_CODE;
+void printSpeed(int32_t time, uint32_t bytes, uint16_t x, uint16_t y, TUI::Color backColor, TUI::Color textColor) IWRAM_CODE;
 template <typename F>
 void runBlockwise(F func, const TestConfig &config) IWRAM_CODE;
 void readBlock(void *source, uint32_t value, uint32_t nrOfWords) IWRAM_CODE;
@@ -197,64 +191,18 @@ uint32_t runErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pa
 			src32[i] = pattern;
 		}
 		auto nrOfDash = (cycle * 13) / nrOfCycles;
-		printChars('#', nrOfDash, 18, 1, 1, 15);
-		printChars(' ', 13 - nrOfDash, 18 + nrOfDash, 1, 1, 15);
+		TUI::printChars('#', nrOfDash, 18, 1, TUI::Color::Blue, TUI::Color::White);
+		TUI::printChars(' ', 13 - nrOfDash, 18 + nrOfDash, 1, TUI::Color::Blue, TUI::Color::White);
 	}
 	return nrOfErrors;
 }
 
 // ------------------------------------------------------------------------------------------------
 
-static char printBuffer[32] = {0};
-
-void printChar(char c, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
-{
-	uint16_t tileNo = static_cast<uint16_t>(c) - 32;
-	uint32_t tileIndex = ((y & 31) * 32) + (x & 31);
-	auto background = Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_1000);
-	background[tileIndex] = 95 | ((backColor & 15) << 12);
-	auto text = Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_2000);
-	text[tileIndex] = tileNo | ((textColor & 15) << 12);
-}
-
-uint16_t printChars(char c, uint16_t n, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
-{
-	uint16_t nrOfCharsPrinted = 0;
-	for (uint32_t i = 0; i < n; i++)
-	{
-		printChar(c, x++, y, backColor, textColor);
-		nrOfCharsPrinted++;
-	}
-	return nrOfCharsPrinted;
-}
-
-uint16_t printString(const char *s, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
-{
-	uint16_t nrOfCharsPrinted = 0;
-	if (s != nullptr)
-	{
-		while (*s != '\0')
-		{
-			printChar(*s, x++, y, backColor, textColor);
-			s++;
-			nrOfCharsPrinted++;
-		}
-	}
-	return nrOfCharsPrinted;
-}
-
-void printValue(uint32_t value, uint32_t base, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
-{
-	itoa(value, printBuffer, base);
-	printString(printBuffer, x, y, backColor, textColor);
-}
-
-void printSpeed(int32_t time, uint32_t bytes, uint16_t x, uint16_t y, uint16_t backColor, uint16_t textColor)
+void printSpeed(int32_t time, uint32_t bytes, uint16_t x, uint16_t y, TUI::Color backColor, TUI::Color textColor)
 {
 	int32_t MBperS = ((int64_t)bytes << 4) / ((int64_t)time);
-	fptoa(MBperS, printBuffer, 8, 2);
-	auto valueLength = printString(printBuffer, x, y, backColor, textColor);
-	printString(" MB/s ", x + valueLength, y, backColor, textColor);
+	TUI::printString(" MB/s ", x + TUI::printFloat(MBperS, x, y, backColor, textColor), y, backColor, textColor);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -267,8 +215,6 @@ static const char *WaitStateStrings[]{"3/3/6", "2/2/4", "1/1/2"};
 static const char *WaitStateOptionStrings[]{"                (R) Timings --", "(L) Timings ++  (R) Timings --", "(L) Timings ++                "};
 constexpr uint32_t CyclesSpeed{8};
 constexpr uint32_t CyclesErrors{4};
-static const uint16_t COLORS[16]{0, 0x5000, 0x280, 0x5280, 0x0014, 0x5014, 0x0154, 0x5294, 0x294a, 0x7d4a, 0x2bea, 0x7fea, 0x295f, 0x7d5f, 0x2bff, 0x7fff};
-
 static const TestConfig testConfig{Memory::EWRAM_BLOCK, Memory::EWRAM_ALLOC_SIZE, Memory::IWRAM_BLOCK, Memory::IWRAM_ALLOC_SIZE};
 
 constexpr int32_t TimerIncrement{164}; // 65536/164=400 -> 1/400=2.5ms
@@ -288,9 +234,9 @@ void updateBlinkState()
 {
 	// blink UI elements
 	blinkState = !blinkState;
-	printChar('+', 10, 0, 2, blinkState ? 4 : 0);
-	printString("Error test", 4, 17, 7, !testSpeed && blinkState ? 4 : 1);
-	printString("Speed test", 20, 17, 7, testSpeed && blinkState ? 4 : 1);
+	TUI::printChar('+', 10, 0, TUI::Color::Green, blinkState ? TUI::Color::Red : TUI::Color::Black);
+	TUI::printString("Error test", 4, 17, TUI::Color::LightGray, !testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
+	TUI::printString("Speed test", 20, 17, TUI::Color::LightGray, testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
 }
 
 void updateInput()
@@ -310,8 +256,8 @@ void updateInput()
 	if (waitStateIndex != waitStateIndexBefore)
 	{
 		Memory::RegWaitEwram = WaitStates[waitStateIndex];
-		printString(WaitStateStrings[waitStateIndex], 15, 3, 1, 15);
-		printString(WaitStateOptionStrings[waitStateIndex], 0, 18, 7, 1);
+		TUI::printString(WaitStateStrings[waitStateIndex], 15, 3, TUI::Color::Blue, TUI::Color::White);
+		TUI::printString(WaitStateOptionStrings[waitStateIndex], 0, 18, TUI::Color::LightGray, TUI::Color::Blue);
 	}
 	// check if we need to change the test mode
 	auto testSpeedBefore = testSpeed;
@@ -325,8 +271,8 @@ void updateInput()
 	}
 	if (testSpeed != testSpeedBefore)
 	{
-		printString("Error test", 4, 17, 7, !testSpeed && blinkState ? 4 : 1);
-		printString("Speed test", 20, 17, 7, testSpeed && blinkState ? 4 : 1);
+		TUI::printString("Error test", 4, 17, TUI::Color::LightGray, !testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
+		TUI::printString("Speed test", 20, 17, TUI::Color::LightGray, testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
 	}
 	// check if we need to reboot
 	if (keys & KEY_START)
@@ -340,39 +286,28 @@ int main()
 	// set default waitstates for GamePak ROM and EWRAM
 	Memory::RegWaitCnt = Memory::WaitCntFast;
 	Memory::RegWaitEwram = Memory::WaitEwramNormal;
-	// set graphics to mode 0 and enable background 2
-	REG_DISPCNT = MODE_0 | BG0_ON | BG1_ON;
-	// copy data to tile map
-	Memory::memcpy32(Tiles::TILE_BASE_TO_MEM(Tiles::TileBase::Base_0000), FONT_8X8_DATA, FONT_8X8_DATA_SIZE);
-	// set up background 0 (text background) and 1 (text foreground) screen and tile map starts and set screen size to 256x256
-	REG_BG0CNT = Tiles::background(Tiles::TileBase::Base_0000, Tiles::ScreenBase::Base_1000, Tiles::ScreenSize::Size_0, 16, 1);
-	REG_BG1CNT = Tiles::background(Tiles::TileBase::Base_0000, Tiles::ScreenBase::Base_2000, Tiles::ScreenSize::Size_0, 16, 0);
-	// build CGA color palette, yesss!!!
-	for (uint32_t i = 0; i < 16; i++)
-	{
-		BG_PALETTE[i * 16] = 0;
-		BG_PALETTE[i * 16 + 1] = COLORS[i];
-	}
+	// set up UI
+	TUI::setup();
 	// build start screen
-	Memory::memset32(Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_1000), 0x105F105F, (32 * 32) >> 1);
-	Memory::memset32(Tiles::SCREEN_BASE_TO_MEM(Tiles::ScreenBase::Base_1000) + 32 * 18, 0x705F705F, 64 >> 1);
-	printString("MemTestGBA+", 0, 0, 2, 0);
-	printString("| Pass", 11, 0, 1, 15);
-	printString("ARM7 16MHz | Test", 0, 1, 1, 15);
-	printString("EWRAM 256K | Pattern:", 0, 2, 1, 15);
-	printString("EWRAM Timings: 3/3/6", 0, 3, 1, 15);
-	printString("Read EWRAM   :", 0, 5, 1, 15);
-	printString("Write EWRAM  :", 0, 6, 1, 15);
-	printString("Set EWRAM    :", 0, 7, 1, 15);
-	printString("Set EWRAM DMA:", 0, 8, 1, 15);
-	printString("IWRAM<-EWRAM :", 0, 9, 1, 15);
-	printString("IWRAM->EWRAM :", 0, 10, 1, 15);
-	printString("IWRAM<-EWRAM DMA:", 0, 11, 1, 15);
-	printString("IWRAM->EWRAM DMA:", 0, 12, 1, 15);
-	printString("Errors: 0", 0, 14, 1, 15);
-	printString("(B) Error test  (A) Speed test", 0, 17, 7, 1);
-	printString(WaitStateOptionStrings[0], 0, 18, 7, 1);
-	printString("        (START) Reboot        ", 0, 19, 7, 1);
+	TUI::fillBackground(TUI::Color::Blue);
+	TUI::fillBackgroundRect(0, 18, TUI::Width, 2, TUI::Color::LightGray);
+	TUI::printString("MemTestGBA+", 0, 0, TUI::Color::Green, TUI::Color::Black);
+	TUI::printString("| Pass", 11, 0, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("ARM7 16MHz | Test", 0, 1, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("EWRAM 256K | Pattern:", 0, 2, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("EWRAM Timings: 3/3/6", 0, 3, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Read EWRAM   :", 0, 5, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Write EWRAM  :", 0, 6, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Set EWRAM    :", 0, 7, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Set EWRAM DMA:", 0, 8, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("IWRAM<-EWRAM :", 0, 9, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("IWRAM->EWRAM :", 0, 10, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("IWRAM<-EWRAM DMA:", 0, 11, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("IWRAM->EWRAM DMA:", 0, 12, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Errors: 0", 0, 14, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("(B) Error test  (A) Speed test", 0, 17, TUI::Color::LightGray, TUI::Color::Blue);
+	TUI::printString(WaitStateOptionStrings[0], 0, 18, TUI::Color::LightGray, TUI::Color::Blue);
+	TUI::printString("        (START) Reboot        ", 0, 19, TUI::Color::LightGray, TUI::Color::Blue);
 	// start wall clock
 	irqInit();
 	// set up time to increase time every ~5ms
@@ -399,25 +334,25 @@ int main()
 		if (testSpeed)
 		{
 			auto result = runSpeedTest(testConfig, CyclesSpeed);
-			printSpeed(result.readTime, result.bytesPerTest, 15, 5, 1, 15);
-			printSpeed(result.writeTime, result.bytesPerTest, 15, 6, 1, 15);
-			printSpeed(result.setTime, result.bytesPerTest, 15, 7, 1, 15);
-			printSpeed(result.setDMATime, result.bytesPerTest, 15, 8, 1, 15);
-			printSpeed(result.copyFromTime, result.bytesPerTest, 15, 9, 1, 15);
-			printSpeed(result.copyToTime, result.bytesPerTest, 15, 10, 1, 15);
-			printSpeed(result.copyFromDMATime, result.bytesPerTest, 18, 11, 1, 15);
-			printSpeed(result.copyToDMATime, result.bytesPerTest, 18, 12, 1, 15);
+			printSpeed(result.readTime, result.bytesPerTest, 15, 5, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.writeTime, result.bytesPerTest, 15, 6, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.setTime, result.bytesPerTest, 15, 7, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.setDMATime, result.bytesPerTest, 15, 8, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyFromTime, result.bytesPerTest, 15, 9, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyToTime, result.bytesPerTest, 15, 10, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyFromDMATime, result.bytesPerTest, 18, 11, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyToDMATime, result.bytesPerTest, 18, 12, TUI::Color::Blue, TUI::Color::White);
 		}
 		else
 		{
 			auto pattern = testPattern(patternIndex);
-			printValue(pattern, 16, 22, 2, 1, 15);
+			TUI::printInt(pattern, 16, 22, 2, TUI::Color::Blue, TUI::Color::White);
 			errorCount += runErrorTest(testConfig, CyclesErrors, pattern);
-			printValue(errorCount, 10, 8, 14, 1, errorCount > 0 ? 4 : 15);
+			TUI::printInt(errorCount, 10, 8, 14, TUI::Color::Blue, errorCount > 0 ? TUI::Color::Red : TUI::Color::White);
 			patternIndex = patternIndex >= TEST_PATTERN_COUNT ? 0 : patternIndex + 1;
 			auto nrOfDash = (patternIndex * 12) / TEST_PATTERN_COUNT;
-			printChars('#', nrOfDash, 18, 0, 1, 15);
-			printChars(' ', 12 - nrOfDash, 18 + nrOfDash, 0, 1, 15);
+			TUI::printChars('#', nrOfDash, 18, 0, TUI::Color::Blue, TUI::Color::White);
+			TUI::printChars(' ', 12 - nrOfDash, 18 + nrOfDash, 0, TUI::Color::Blue, TUI::Color::White);
 		}
 	} while (true);
 	return 0;

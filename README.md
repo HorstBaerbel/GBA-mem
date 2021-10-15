@@ -91,3 +91,8 @@ make -j $(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
 If you want to build your own soft- or hardware based on this, you can. See the [MIT LICENSE](LICENSE).  
 The "Modern DOS" 8x8 font is from [Jayvee Enaguas](https://notabug.org/HarvettFox96/ttf-moderndos) and used by [CC0](https://notabug.org/HarvettFox96/ttf-moderndos/src/master/LICENSE).  
 The CMake build scripts / toolchain is from [Thomas Farr](https://github.com/Xtansia/3ds-cmake) and uses the [MIT LICENSE](3ds-cmake/LICENSE).
+
+## Todo
+
+* Test IS62WV12816EBLL-45TLI
+* Use framework

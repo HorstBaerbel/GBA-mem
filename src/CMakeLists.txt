@@ -22,6 +22,7 @@ LIST(APPEND SOURCE_FILES
 	memcpy.s
 	memory.cpp
 	memset.s
+	tui.cpp
 )
 
 LIST(APPEND EXTRA_SRC_FILES
