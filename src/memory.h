@@ -3,6 +3,8 @@
 #include <gba_base.h>
 #include <cstdint>
 
+#include "registers.h"
+
 /// @brief Use for default 0 initialized static variables
 #define STATIC_BSS static EWRAM_BSS
 /// @brief Use for initialized static variables
@@ -18,7 +20,7 @@ namespace Memory
 	extern uint8_t EWRAM_BLOCK[EWRAM_ALLOC_SIZE] EWRAM_DATA;
 
 	/// @brief Register for Game Pak SRAM and ROM wait states
-	inline auto &RegWaitCnt{*reinterpret_cast<volatile uint16_t *>(REG_BASE + 0x0204)};
+	constexpr reg_t<uint16_t, REG_BASE + 0x0204> RegWaitCnt;
 
 	/// @brief Minimum wait states possible for Game Pak SRAM and ROM
 	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
@@ -29,7 +31,7 @@ namespace Memory
 	constexpr uint16_t WaitCntNormal = 0x4317;
 
 	/// @brief Register for EWRAM wait states
-	inline auto &RegWaitEwram{*reinterpret_cast<volatile uint32_t *>(REG_BASE + 0x0800)};
+	constexpr reg_t<uint32_t, REG_BASE + 0x0800> RegWaitEwram;
 
 	/// @brief Wait states for EWRAM that crash the GBA (1/1/2)
 	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
