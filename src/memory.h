@@ -1,7 +1,7 @@
 #pragma once
 
-#include <gba_base.h>
 #include <cstdint>
+#include <gba_base.h>
 
 #include "registers.h"
 
@@ -22,13 +22,22 @@ namespace Memory
 	/// @brief Register for Game Pak SRAM and ROM wait states
 	constexpr reg_t<uint16_t, REG_BASE + 0x0204> RegWaitCnt;
 
-	/// @brief Minimum wait states possible for Game Pak SRAM and ROM
+	/// @brief Minimum wait states possible for Game Pak ROM (2,1) and faster SRAM wait states (4)
 	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
-	constexpr uint16_t WaitCntFast = 0x46DA;
+	constexpr uint16_t WaitCntFast = 0x46D8;
 
-	/// @brief Regular wait states possible for Game Pak SRAM and ROM
+	/// @brief Regular wait states possible for Game Pak ROM (3,1) and maximum SRAM wait states (8)
+	/// This is what most commercial carts use.
 	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
 	constexpr uint16_t WaitCntNormal = 0x4317;
+
+	/// @brief Slower wait states possible for Game Pak ROM (4,2) and maximum SRAM wait states (8)
+	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
+	constexpr uint16_t WaitCntSlow = 0x4303;
+
+	/// @brief Maximum wait states possible for Game Pak ROM (8,2) and maximum SRAM wait states (8)
+	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
+	constexpr uint16_t WaitCntSlowest = 0x430F;
 
 	/// @brief Register for EWRAM wait states
 	constexpr reg_t<uint32_t, REG_BASE + 0x0800> RegWaitEwram;

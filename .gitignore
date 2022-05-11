@@ -6,3 +6,5 @@ KiCad/*.ses
 KiCad/*.bin
 KiCad/fp-info-cache
 KiCad/GBAmem-cache.lib
+
+*.sav

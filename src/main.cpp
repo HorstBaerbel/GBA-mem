@@ -1,10 +1,11 @@
 #include <gba_base.h>
-#include <gba_video.h>
 #include <gba_input.h>
-#include <gba_timers.h>
 #include <gba_interrupt.h>
 #include <gba_systemcalls.h>
+#include <gba_timers.h>
+#include <gba_video.h>
 
+#include "data/romdata.h"
 #include "dma.h"
 #include "itoa.h"
 #include "memory.h"
@@ -20,6 +21,7 @@ struct alignas(4) TestConfig
 
 struct alignas(4) SpeedResult
 {
+	int32_t romTime = 0;
 	int32_t readTime = 0;
 	int32_t writeTime = 0;
 	int32_t setTime = 0;
@@ -131,7 +133,11 @@ int32_t runFunction(F func, const TestConfig &config, uint32_t nrOfCycles)
 
 SpeedResult runSpeedTest(const TestConfig &config, uint32_t nrOfCycles)
 {
-	SpeedResult result = {0, 0, 0, 0, 0, 0, 0, 0, config.destSize * nrOfCycles};
+	SpeedResult result = {0, 0, 0, 0, 0, 0, 0, 0, 0, config.destSize * nrOfCycles};
+	auto rom = config;
+	rom.src = reinterpret_cast<const uint8_t *>(ROM_DATA);
+	rom.srcSize = ROM_DATA_SIZE * 4;
+	result.romTime = runFunction(readBlock, rom, nrOfCycles);
 	auto to = config;
 	result.readTime = runFunction(readBlock, to, nrOfCycles);
 	result.writeTime = runFunction(writeBlock, to, nrOfCycles);
@@ -209,10 +215,14 @@ void printSpeed(int32_t time, uint32_t bytes, uint16_t x, uint16_t y, TUI::Color
 
 static bool blinkState{false};
 static bool testSpeed{true};
-static uint32_t waitStateIndex{0};
-static const uint32_t WaitStates[]{Memory::WaitEwramNormal, Memory::WaitEwramFast, Memory::WaitEwramLudicrous};
-static const char *WaitStateStrings[]{"3/3/6", "2/2/4", "1/1/2"};
-static const char *WaitStateOptionStrings[]{"                (R) Timings --", "(L) Timings ++  (R) Timings --", "(L) Timings ++                "};
+static uint32_t ramWaitStateIndex{0};
+static const uint32_t RamWaitStates[]{Memory::WaitEwramNormal, Memory::WaitEwramFast, Memory::WaitEwramLudicrous};
+static const char *RamWaitStateStrings[]{"3/3/6", "2/2/4", "1/1/2"};
+static const char *RamWaitStateOptionStrings[]{"        EWRAM timings   -- (R)", "(L) ++  EWRAM timings   -- (R)", "(L) ++  EWRAM timings         "};
+static uint32_t romWaitStateIndex{2};
+static const uint32_t RomWaitStates[]{Memory::WaitCntSlowest, Memory::WaitCntSlow, Memory::WaitCntNormal, Memory::WaitCntFast};
+static const char *RomWaitStateStrings[]{"8,2", "4,2", "3,1", "2,1"};
+static const char *RomWaitStateOptionStrings[]{"       ROM wait states  -- (>)", "(<) ++ ROM wait states  -- (>)", "(<) ++ ROM wait states  -- (>)", "(<) ++ ROM wait states        "};
 constexpr uint32_t CyclesSpeed{8};
 constexpr uint32_t CyclesErrors{4};
 static const TestConfig testConfig{Memory::EWRAM_BLOCK, Memory::EWRAM_ALLOC_SIZE, Memory::IWRAM_BLOCK, Memory::IWRAM_ALLOC_SIZE};
@@ -230,34 +240,65 @@ void updateTime()
 	TimerTicks += TimerIncrement;
 }
 
+void printTestState()
+{
+	TUI::printString("Error test", 4, 16, TUI::Color::LightGray, !testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
+	TUI::printString("Speed test", 20, 16, TUI::Color::LightGray, testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
+}
+
 void updateBlinkState()
 {
 	// blink UI elements
 	blinkState = !blinkState;
 	TUI::printChar('+', 10, 0, TUI::Color::Green, blinkState ? TUI::Color::Red : TUI::Color::Black);
-	TUI::printString("Error test", 4, 17, TUI::Color::LightGray, !testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
-	TUI::printString("Speed test", 20, 17, TUI::Color::LightGray, testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
+	printTestState();
+}
+
+void updateRamTimings()
+{
+	TUI::printString(RamWaitStateStrings[ramWaitStateIndex], 15, 3, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString(RamWaitStateOptionStrings[ramWaitStateIndex], 0, 17, TUI::Color::LightGray, TUI::Color::Blue);
+}
+
+void updateRomWaitStates()
+{
+	TUI::printString(RomWaitStateStrings[romWaitStateIndex], 26, 3, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString(RomWaitStateOptionStrings[romWaitStateIndex], 0, 18, TUI::Color::LightGray, TUI::Color::Blue);
 }
 
 void updateInput()
 {
 	scanKeys();
 	auto keys = keysDown();
-	// check if need to change wait states
-	auto waitStateIndexBefore = waitStateIndex;
+	// check if need to change EWRAM timings
+	auto ramWaitStateIndexBefore = ramWaitStateIndex;
 	if (keys & KEY_L)
 	{
-		waitStateIndex = waitStateIndex > 0 ? waitStateIndex - 1 : 0;
+		ramWaitStateIndex = ramWaitStateIndex > 0 ? ramWaitStateIndex - 1 : 0;
 	}
 	else if (keys & KEY_R)
 	{
-		waitStateIndex = waitStateIndex < 2 ? waitStateIndex + 1 : 2;
+		ramWaitStateIndex = ramWaitStateIndex < 2 ? ramWaitStateIndex + 1 : 2;
 	}
-	if (waitStateIndex != waitStateIndexBefore)
+	if (ramWaitStateIndex != ramWaitStateIndexBefore)
 	{
-		Memory::RegWaitEwram = WaitStates[waitStateIndex];
-		TUI::printString(WaitStateStrings[waitStateIndex], 15, 3, TUI::Color::Blue, TUI::Color::White);
-		TUI::printString(WaitStateOptionStrings[waitStateIndex], 0, 18, TUI::Color::LightGray, TUI::Color::Blue);
+		Memory::RegWaitEwram = RamWaitStates[ramWaitStateIndex];
+		updateRamTimings();
+	}
+	// check if need to change ROM wait states
+	auto romWaitStateIndexBefore = romWaitStateIndex;
+	if (keys & KEY_LEFT)
+	{
+		romWaitStateIndex = romWaitStateIndex > 0 ? romWaitStateIndex - 1 : 0;
+	}
+	else if (keys & KEY_RIGHT)
+	{
+		romWaitStateIndex = romWaitStateIndex < 3 ? romWaitStateIndex + 1 : 3;
+	}
+	if (romWaitStateIndex != romWaitStateIndexBefore)
+	{
+		Memory::RegWaitCnt = RomWaitStates[romWaitStateIndex];
+		updateRomWaitStates();
 	}
 	// check if we need to change the test mode
 	auto testSpeedBefore = testSpeed;
@@ -271,8 +312,7 @@ void updateInput()
 	}
 	if (testSpeed != testSpeedBefore)
 	{
-		TUI::printString("Error test", 4, 17, TUI::Color::LightGray, !testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
-		TUI::printString("Speed test", 20, 17, TUI::Color::LightGray, testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
+		printTestState();
 	}
 	// check if we need to reboot
 	if (keys & KEY_START)
@@ -283,8 +323,8 @@ void updateInput()
 
 int main()
 {
-	// set default waitstates for GamePak ROM and EWRAM
-	Memory::RegWaitCnt = Memory::WaitCntFast;
+	// set startup waitstates for GamePak ROM and EWRAM
+	Memory::RegWaitCnt = Memory::WaitCntNormal;
 	Memory::RegWaitEwram = Memory::WaitEwramNormal;
 	// set up UI
 	TUI::setup();
@@ -295,19 +335,23 @@ int main()
 	TUI::printString("| Pass", 11, 0, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("ARM7 16MHz | Test", 0, 1, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("EWRAM 256K | Pattern:", 0, 2, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("EWRAM Timings: 3/3/6", 0, 3, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Read EWRAM   :", 0, 5, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Write EWRAM  :", 0, 6, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Set EWRAM    :", 0, 7, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Set EWRAM DMA:", 0, 8, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("IWRAM<-EWRAM :", 0, 9, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("IWRAM->EWRAM :", 0, 10, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("IWRAM<-EWRAM DMA:", 0, 11, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("IWRAM->EWRAM DMA:", 0, 12, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Errors: 0", 0, 14, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("(B) Error test  (A) Speed test", 0, 17, TUI::Color::LightGray, TUI::Color::Blue);
-	TUI::printString(WaitStateOptionStrings[0], 0, 18, TUI::Color::LightGray, TUI::Color::Blue);
+	TUI::printString("Timings: EWRAM 3/3/6, ROM 3,1", 0, 3, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Read ROM     :", 0, 5, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Read EWRAM   :", 0, 6, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Write EWRAM  :", 0, 7, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Set EWRAM    :", 0, 8, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Set EWRAM DMA:", 0, 9, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("IWRAM<-EWRAM :", 0, 10, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("IWRAM->EWRAM :", 0, 11, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("IWRAM<-EWRAM DMA:", 0, 12, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("IWRAM->EWRAM DMA:", 0, 13, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Errors: 0", 0, 15, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("(B) Error test  (A) Speed test", 0, 16, TUI::Color::LightGray, TUI::Color::Blue);
+	TUI::printString(RamWaitStateOptionStrings[ramWaitStateIndex], 0, 17, TUI::Color::LightGray, TUI::Color::Blue);
+	TUI::printString(RomWaitStateOptionStrings[romWaitStateIndex], 0, 18, TUI::Color::LightGray, TUI::Color::Blue);
 	TUI::printString("        (START) Reboot        ", 0, 19, TUI::Color::LightGray, TUI::Color::Blue);
+	updateRamTimings();
+	updateRomWaitStates();
 	// start wall clock
 	irqInit();
 	// set up time to increase time every ~5ms
@@ -334,21 +378,22 @@ int main()
 		if (testSpeed)
 		{
 			auto result = runSpeedTest(testConfig, CyclesSpeed);
-			printSpeed(result.readTime, result.bytesPerTest, 15, 5, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.writeTime, result.bytesPerTest, 15, 6, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.setTime, result.bytesPerTest, 15, 7, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.setDMATime, result.bytesPerTest, 15, 8, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.copyFromTime, result.bytesPerTest, 15, 9, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.copyToTime, result.bytesPerTest, 15, 10, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.copyFromDMATime, result.bytesPerTest, 18, 11, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.copyToDMATime, result.bytesPerTest, 18, 12, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.romTime, result.bytesPerTest, 15, 5, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.readTime, result.bytesPerTest, 15, 6, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.writeTime, result.bytesPerTest, 15, 7, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.setTime, result.bytesPerTest, 15, 8, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.setDMATime, result.bytesPerTest, 15, 9, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyFromTime, result.bytesPerTest, 15, 10, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyToTime, result.bytesPerTest, 15, 11, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyFromDMATime, result.bytesPerTest, 18, 12, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyToDMATime, result.bytesPerTest, 18, 13, TUI::Color::Blue, TUI::Color::White);
 		}
 		else
 		{
 			auto pattern = testPattern(patternIndex);
 			TUI::printInt(pattern, 16, 22, 2, TUI::Color::Blue, TUI::Color::White);
 			errorCount += runErrorTest(testConfig, CyclesErrors, pattern);
-			TUI::printInt(errorCount, 10, 8, 14, TUI::Color::Blue, errorCount > 0 ? TUI::Color::Red : TUI::Color::White);
+			TUI::printInt(errorCount, 10, 8, 15, TUI::Color::Blue, errorCount > 0 ? TUI::Color::Red : TUI::Color::White);
 			patternIndex = patternIndex >= TEST_PATTERN_COUNT ? 0 : patternIndex + 1;
 			auto nrOfDash = (patternIndex * 12) / TEST_PATTERN_COUNT;
 			TUI::printChars('#', nrOfDash, 18, 0, TUI::Color::Blue, TUI::Color::White);
