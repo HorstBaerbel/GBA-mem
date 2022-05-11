@@ -20,24 +20,24 @@ namespace Memory
 	extern uint8_t EWRAM_BLOCK[EWRAM_ALLOC_SIZE] EWRAM_DATA;
 
 	/// @brief Register for Game Pak SRAM and ROM wait states
-	constexpr reg_t<uint16_t, REG_BASE + 0x0204> RegWaitCnt;
+	constexpr reg_t<uint32_t, REG_BASE + 0x0204> RegWaitCnt;
 
-	/// @brief Minimum wait states possible for Game Pak ROM (2,1) and faster SRAM wait states (4)
+	/// @brief Minimum wait states possible for Game Pak ROM (2,1 / 2,1 / 2,1) and faster SRAM wait states (4)
 	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
-	constexpr uint16_t WaitCntFast = 0x46D8;
+	constexpr uint32_t WaitCntFast = 0x46D8;
 
-	/// @brief Regular wait states possible for Game Pak ROM (3,1) and maximum SRAM wait states (8)
+	/// @brief Regular wait states possible for Game Pak ROM (3,1 / 3,1 / 3,1) and maximum SRAM wait states (8)
 	/// This is what most commercial carts use.
 	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
-	constexpr uint16_t WaitCntNormal = 0x4317;
+	constexpr uint32_t WaitCntNormal = 0x45B7;
 
-	/// @brief Slower wait states possible for Game Pak ROM (4,2) and maximum SRAM wait states (8)
+	/// @brief Slower wait states possible for Game Pak ROM (4,2 / 4,4 / 4,8) and maximum SRAM wait states (8)
 	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
-	constexpr uint16_t WaitCntSlow = 0x4303;
+	constexpr uint32_t WaitCntSlow = 0x4003;
 
-	/// @brief Maximum wait states possible for Game Pak ROM (8,2) and maximum SRAM wait states (8)
+	/// @brief Maximum wait states possible for Game Pak ROM (8,2 / 8,4 / 8,8) and maximum SRAM wait states (8)
 	/// See: http://problemkaputt.de/gbatek.htm#gbasystemcontrol
-	constexpr uint16_t WaitCntSlowest = 0x430F;
+	constexpr uint32_t WaitCntSlowest = 0x436F;
 
 	/// @brief Register for EWRAM wait states
 	constexpr reg_t<uint32_t, REG_BASE + 0x0800> RegWaitEwram;

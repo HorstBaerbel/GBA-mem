@@ -22,6 +22,7 @@ struct alignas(4) TestConfig
 struct alignas(4) SpeedResult
 {
 	int32_t romTime = 0;
+	uint32_t bytesPerRomTest = 0;
 	int32_t readTime = 0;
 	int32_t writeTime = 0;
 	int32_t setTime = 0;
@@ -30,26 +31,33 @@ struct alignas(4) SpeedResult
 	int32_t copyFromTime = 0;
 	int32_t copyToDMATime = 0;
 	int32_t copyFromDMATime = 0;
-	uint32_t bytesPerTest = 0;
+	uint32_t bytesPerRamTest = 0;
 };
 
 // define all functions here, so we can put them into IWRAM
+#define NOINLINE __attribute__((noinline))
+
 void printSpeed(int32_t time, uint32_t bytes, uint16_t x, uint16_t y, TUI::Color backColor, TUI::Color textColor) IWRAM_CODE;
 template <typename F>
 void runBlockwise(F func, const TestConfig &config) IWRAM_CODE;
-void readBlock(void *source, uint32_t value, uint32_t nrOfWords) IWRAM_CODE;
+void readBlock(const void *source, uint32_t value, uint32_t nrOfWords) IWRAM_CODE;
 void writeBlock(void *destination, uint32_t value, uint32_t nrOfWords) IWRAM_CODE;
 template <typename F>
 int32_t runFunctionBlockwise(F func, const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
 template <typename F>
-int32_t runFunction(F func, const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
+int32_t runFunctionOnSrc(F func, const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
+template <typename F>
+int32_t runFunctionOnDest(F func, const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
 SpeedResult runSpeedTest(const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
 uint32_t testPattern(uint32_t index) IWRAM_CODE;
 uint32_t runErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pattern) IWRAM_CODE;
-int32_t getTime() IWRAM_CODE;
-void updateTime() IWRAM_CODE;
+int32_t getTime() NOINLINE IWRAM_CODE;
+void updateTime() NOINLINE IWRAM_CODE;
 void updateBlinkState() IWRAM_CODE;
 void updateInput() IWRAM_CODE;
+void printTestState() IWRAM_CODE;
+void printRamTimings() IWRAM_CODE;
+void printRomWaitStates() IWRAM_CODE;
 int main() IWRAM_CODE;
 
 // ------------------------------------------------------------------------------------------------
@@ -85,7 +93,7 @@ void runBlockwise(F func, const TestConfig &config)
 	}
 }
 
-void readBlock(void *source, uint32_t value, uint32_t nrOfWords)
+void readBlock(const void *source, uint32_t value, uint32_t nrOfWords)
 {
 	uint32_t v = value;
 	auto src32 = reinterpret_cast<const uint32_t *>(source);
@@ -121,7 +129,18 @@ int32_t runFunctionBlockwise(F func, const TestConfig &config, uint32_t nrOfCycl
 }
 
 template <typename F>
-int32_t runFunction(F func, const TestConfig &config, uint32_t nrOfCycles)
+int32_t runFunctionOnSrc(F func, const TestConfig &config, uint32_t nrOfCycles)
+{
+	auto startTime = getTime();
+	for (uint32_t cycle = 0; cycle < nrOfCycles; cycle++)
+	{
+		func(config.src, 0x12345678, config.srcSize >> 2);
+	}
+	return getTime() - startTime;
+}
+
+template <typename F>
+int32_t runFunctionOnDest(F func, const TestConfig &config, uint32_t nrOfCycles)
 {
 	auto startTime = getTime();
 	for (uint32_t cycle = 0; cycle < nrOfCycles; cycle++)
@@ -133,16 +152,16 @@ int32_t runFunction(F func, const TestConfig &config, uint32_t nrOfCycles)
 
 SpeedResult runSpeedTest(const TestConfig &config, uint32_t nrOfCycles)
 {
-	SpeedResult result = {0, 0, 0, 0, 0, 0, 0, 0, 0, config.destSize * nrOfCycles};
+	SpeedResult result = {0, ROM_DATA_SIZE * 4 * nrOfCycles, 0, 0, 0, 0, 0, 0, 0, 0, config.destSize * nrOfCycles};
 	auto rom = config;
 	rom.src = reinterpret_cast<const uint8_t *>(ROM_DATA);
 	rom.srcSize = ROM_DATA_SIZE * 4;
-	result.romTime = runFunction(readBlock, rom, nrOfCycles);
+	result.romTime = runFunctionOnSrc(readBlock, rom, nrOfCycles);
 	auto to = config;
-	result.readTime = runFunction(readBlock, to, nrOfCycles);
-	result.writeTime = runFunction(writeBlock, to, nrOfCycles);
-	result.setTime = runFunction(Memory::memset32, to, nrOfCycles);
-	result.setDMATime = runFunction(DMA::dma_fill32, to, nrOfCycles);
+	result.readTime = runFunctionOnDest(readBlock, to, nrOfCycles);
+	result.writeTime = runFunctionOnDest(writeBlock, to, nrOfCycles);
+	result.setTime = runFunctionOnDest(Memory::memset32, to, nrOfCycles);
+	result.setDMATime = runFunctionOnDest(DMA::dma_fill32, to, nrOfCycles);
 	TestConfig from = {const_cast<uint8_t *>(config.src), config.srcSize, config.dest, config.destSize};
 	result.copyFromTime = runFunctionBlockwise(Memory::memcpy32, from, nrOfCycles);
 	result.copyToTime = runFunctionBlockwise(Memory::memcpy32, to, nrOfCycles);
@@ -240,12 +259,6 @@ void updateTime()
 	TimerTicks += TimerIncrement;
 }
 
-void printTestState()
-{
-	TUI::printString("Error test", 4, 16, TUI::Color::LightGray, !testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
-	TUI::printString("Speed test", 20, 16, TUI::Color::LightGray, testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
-}
-
 void updateBlinkState()
 {
 	// blink UI elements
@@ -254,13 +267,19 @@ void updateBlinkState()
 	printTestState();
 }
 
-void updateRamTimings()
+void printTestState()
+{
+	TUI::printString("Error test", 4, 16, TUI::Color::LightGray, !testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
+	TUI::printString("Speed test", 20, 16, TUI::Color::LightGray, testSpeed && blinkState ? TUI::Color::Red : TUI::Color::Blue);
+}
+
+void printRamTimings()
 {
 	TUI::printString(RamWaitStateStrings[ramWaitStateIndex], 15, 3, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString(RamWaitStateOptionStrings[ramWaitStateIndex], 0, 17, TUI::Color::LightGray, TUI::Color::Blue);
 }
 
-void updateRomWaitStates()
+void printRomWaitStates()
 {
 	TUI::printString(RomWaitStateStrings[romWaitStateIndex], 26, 3, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString(RomWaitStateOptionStrings[romWaitStateIndex], 0, 18, TUI::Color::LightGray, TUI::Color::Blue);
@@ -283,7 +302,7 @@ void updateInput()
 	if (ramWaitStateIndex != ramWaitStateIndexBefore)
 	{
 		Memory::RegWaitEwram = RamWaitStates[ramWaitStateIndex];
-		updateRamTimings();
+		printRamTimings();
 	}
 	// check if need to change ROM wait states
 	auto romWaitStateIndexBefore = romWaitStateIndex;
@@ -298,7 +317,7 @@ void updateInput()
 	if (romWaitStateIndex != romWaitStateIndexBefore)
 	{
 		Memory::RegWaitCnt = RomWaitStates[romWaitStateIndex];
-		updateRomWaitStates();
+		printRomWaitStates();
 	}
 	// check if we need to change the test mode
 	auto testSpeedBefore = testSpeed;
@@ -350,11 +369,11 @@ int main()
 	TUI::printString(RamWaitStateOptionStrings[ramWaitStateIndex], 0, 17, TUI::Color::LightGray, TUI::Color::Blue);
 	TUI::printString(RomWaitStateOptionStrings[romWaitStateIndex], 0, 18, TUI::Color::LightGray, TUI::Color::Blue);
 	TUI::printString("        (START) Reboot        ", 0, 19, TUI::Color::LightGray, TUI::Color::Blue);
-	updateRamTimings();
-	updateRomWaitStates();
+	printRamTimings();
+	printRomWaitStates();
 	// start wall clock
 	irqInit();
-	// set up time to increase time every ~5ms
+	// set up time to increase time every ~2.5ms
 	irqSet(irqMASKS::IRQ_TIMER3, updateTime);
 	irqEnable(irqMASKS::IRQ_TIMER3);
 	REG_TM3CNT_L = 65536 - TimerIncrement;
@@ -378,15 +397,15 @@ int main()
 		if (testSpeed)
 		{
 			auto result = runSpeedTest(testConfig, CyclesSpeed);
-			printSpeed(result.romTime, result.bytesPerTest, 15, 5, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.readTime, result.bytesPerTest, 15, 6, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.writeTime, result.bytesPerTest, 15, 7, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.setTime, result.bytesPerTest, 15, 8, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.setDMATime, result.bytesPerTest, 15, 9, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.copyFromTime, result.bytesPerTest, 15, 10, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.copyToTime, result.bytesPerTest, 15, 11, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.copyFromDMATime, result.bytesPerTest, 18, 12, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.copyToDMATime, result.bytesPerTest, 18, 13, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.romTime, result.bytesPerRomTest, 15, 5, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.readTime, result.bytesPerRamTest, 15, 6, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.writeTime, result.bytesPerRamTest, 15, 7, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.setTime, result.bytesPerRamTest, 15, 8, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.setDMATime, result.bytesPerRamTest, 15, 9, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyFromTime, result.bytesPerRamTest, 15, 10, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyToTime, result.bytesPerRamTest, 15, 11, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyFromDMATime, result.bytesPerRamTest, 18, 12, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyToDMATime, result.bytesPerRamTest, 18, 13, TUI::Color::Blue, TUI::Color::White);
 		}
 		else
 		{
