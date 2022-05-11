@@ -1,6 +1,9 @@
-# NOTE: This almost killed my GBA. I'm leaving this here for academic purposes...
-
-Here be dragons 🐉!
+<p align="center">
+    <span>
+        <font size="12">Here be dragons🐉!</font></br>
+        <font size="4">This killed my GBA. I probably fried the power supply IC. I'm leaving this here for academic purposes...</font>
+    </span>
+</p>
 
 # Game Boy Advance faster EWRAM hack
 
@@ -26,12 +29,12 @@ All pins have been connected straight through, with the exception of /CS1 (/CE1)
 
 Supposedly compatible SRAM chips for the board:
 
-| Model                                                                                                                    | min. access time | max. power draw | working |
-| ------------------------------------------------------------------------------------------------------------------------ | ---------------- | --------------- | ------- |
-| [IS62WV12816BLL-55TLI / -55BLI](http://www.issi.com/WW/pdf/62WV12816ALL.pdf)                                             | 55ns             | ~25mA           | NO      |
-| [IS62WV12816EBLL-45TLI](http://www.issi.com/WW/pdf/62-65WV12816EALL-BLL.pdf)                                             | 45ns             | ~15mA           | NO?     |
-| [CY62136FV30LL-45ZSXIT / -45ZSXI / -45ZSXA](https://www.cypress.com/file/43866/download)                                 | 45ns             | ~18mA           | NO?     |
-| [CY62136ESL-45ZSXI](https://www.mouser.de/datasheet/2/100/001-48147_CY62136ESL_MoBL_R_2-Mbit_128_K_X_16_Stat-319203.pdf) | 45ns             | ~20mA           | NO?     |
+| Model                                                                                                                    | min. access time | max. power draw | working     |
+| ------------------------------------------------------------------------------------------------------------------------ | ---------------- | --------------- | ----------- |
+| [IS62WV12816BLL-55TLI / -55BLI](http://www.issi.com/WW/pdf/62WV12816ALL.pdf)                                             | 55ns             | ~25mA           | NO (tested) |
+| [IS62WV12816EBLL-45TLI](http://www.issi.com/WW/pdf/62-65WV12816EALL-BLL.pdf)                                             | 45ns             | ~15mA           | ?           |
+| [CY62136FV30LL-45ZSXIT / -45ZSXI / -45ZSXA](https://www.cypress.com/file/43866/download)                                 | 45ns             | ~18mA           | ?           |
+| [CY62136ESL-45ZSXI](https://www.mouser.de/datasheet/2/100/001-48147_CY62136ESL_MoBL_R_2-Mbit_128_K_X_16_Stat-319203.pdf) | 45ns             | ~20mA           | ?           |
 
 The power draw of the replacement chips seems to be comparable to that of the originals. I'd go with the IS62WV12816EBLL-45TLI if you can find it, because of the lowest power draw.
 
