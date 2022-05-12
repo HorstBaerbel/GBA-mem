@@ -50,7 +50,8 @@ template <typename F>
 int32_t runFunctionOnDest(F func, const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
 SpeedResult runSpeedTest(const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
 uint32_t testPattern(uint32_t index) IWRAM_CODE;
-uint32_t runErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pattern) IWRAM_CODE;
+uint32_t runRamErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pattern) IWRAM_CODE;
+uint32_t runRomErrorTest(const TestConfig &config, uint32_t nrOfCycles) IWRAM_CODE;
 int32_t getTime() NOINLINE IWRAM_CODE;
 void updateTime() NOINLINE IWRAM_CODE;
 void updateBlinkState() IWRAM_CODE;
@@ -195,7 +196,7 @@ uint32_t testPattern(uint32_t index)
 	return 0;
 }
 
-uint32_t runErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pattern)
+uint32_t runRamErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pattern)
 {
 	uint32_t nrOfErrors = 0;
 	auto complement = ~pattern;
@@ -222,6 +223,21 @@ uint32_t runErrorTest(const TestConfig &config, uint32_t nrOfCycles, uint32_t pa
 	return nrOfErrors;
 }
 
+uint32_t runRomErrorTest(const TestConfig &config, uint32_t nrOfCycles)
+{
+	uint32_t nrOfErrors = 0;
+	const auto count = ROM_DATA_SIZE;
+	auto src32 = ROM_DATA;
+	for (uint32_t cycle = 0; cycle < nrOfCycles; cycle++)
+	{
+		for (uint32_t i = 0; i < count; i++)
+		{
+			nrOfErrors += src32[i] != i;
+		}
+	}
+	return nrOfErrors;
+}
+
 // ------------------------------------------------------------------------------------------------
 
 void printSpeed(int32_t time, uint32_t bytes, uint16_t x, uint16_t y, TUI::Color backColor, TUI::Color textColor)
@@ -238,7 +254,7 @@ static uint32_t ramWaitStateIndex{0};
 static const uint32_t RamWaitStates[]{Memory::WaitEwramNormal, Memory::WaitEwramFast, Memory::WaitEwramLudicrous};
 static const char *RamWaitStateStrings[]{"3/3/6", "2/2/4", "1/1/2"};
 static const char *RamWaitStateOptionStrings[]{"        EWRAM timings   -- (R)", "(L) ++  EWRAM timings   -- (R)", "(L) ++  EWRAM timings         "};
-static uint32_t romWaitStateIndex{2};
+static uint32_t romWaitStateIndex{1};
 static const uint32_t RomWaitStates[]{Memory::WaitCntSlowest, Memory::WaitCntSlow, Memory::WaitCntNormal, Memory::WaitCntFast};
 static const char *RomWaitStateStrings[]{"8,2", "4,2", "3,1", "2,1"};
 static const char *RomWaitStateOptionStrings[]{"       ROM wait states  -- (>)", "(<) ++ ROM wait states  -- (>)", "(<) ++ ROM wait states  -- (>)", "(<) ++ ROM wait states        "};
@@ -343,7 +359,7 @@ void updateInput()
 int main()
 {
 	// set startup waitstates for GamePak ROM and EWRAM
-	Memory::RegWaitCnt = Memory::WaitCntNormal;
+	Memory::RegWaitCnt = Memory::WaitCntSlow;
 	Memory::RegWaitEwram = Memory::WaitEwramNormal;
 	// set up UI
 	TUI::setup();
@@ -354,7 +370,7 @@ int main()
 	TUI::printString("| Pass", 11, 0, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("ARM7 16MHz | Test", 0, 1, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("EWRAM 256K | Pattern:", 0, 2, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Timings: EWRAM 3/3/6, ROM 3,1", 0, 3, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Timings: EWRAM 3/3/6, ROM 4,2", 0, 3, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("Read ROM     :", 0, 5, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("Read EWRAM   :", 0, 6, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("Write EWRAM  :", 0, 7, TUI::Color::Blue, TUI::Color::White);
@@ -364,7 +380,7 @@ int main()
 	TUI::printString("IWRAM->EWRAM :", 0, 11, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("IWRAM<-EWRAM DMA:", 0, 12, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("IWRAM->EWRAM DMA:", 0, 13, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Errors: 0", 0, 15, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Errors: 0, 0", 0, 15, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("(B) Error test  (A) Speed test", 0, 16, TUI::Color::LightGray, TUI::Color::Blue);
 	TUI::printString(RamWaitStateOptionStrings[ramWaitStateIndex], 0, 17, TUI::Color::LightGray, TUI::Color::Blue);
 	TUI::printString(RomWaitStateOptionStrings[romWaitStateIndex], 0, 18, TUI::Color::LightGray, TUI::Color::Blue);
@@ -389,7 +405,8 @@ int main()
 	REG_TM1CNT_L = 65536 - 2458;
 	REG_TM1CNT_H = TIMER_START | TIMER_IRQ | 3;
 	// set up some variables
-	uint32_t errorCount = 0;
+	uint32_t ramErrorCount = 0;
+	uint32_t romErrorCount = 0;
 	uint32_t patternIndex = 0;
 	// start main loop
 	do
@@ -409,14 +426,19 @@ int main()
 		}
 		else
 		{
+			// test EWRAM reading / writing for errors
 			auto pattern = testPattern(patternIndex);
 			TUI::printInt(pattern, 16, 22, 2, TUI::Color::Blue, TUI::Color::White);
-			errorCount += runErrorTest(testConfig, CyclesErrors, pattern);
-			TUI::printInt(errorCount, 10, 8, 15, TUI::Color::Blue, errorCount > 0 ? TUI::Color::Red : TUI::Color::White);
+			ramErrorCount += runRamErrorTest(testConfig, CyclesErrors, pattern);
+			auto ramErrorLength = TUI::printInt(ramErrorCount, 10, 8, 15, TUI::Color::Blue, ramErrorCount > 0 ? TUI::Color::Red : TUI::Color::White);
 			patternIndex = patternIndex >= TEST_PATTERN_COUNT ? 0 : patternIndex + 1;
 			auto nrOfDash = (patternIndex * 12) / TEST_PATTERN_COUNT;
 			TUI::printChars('#', nrOfDash, 18, 0, TUI::Color::Blue, TUI::Color::White);
 			TUI::printChars(' ', 12 - nrOfDash, 18 + nrOfDash, 0, TUI::Color::Blue, TUI::Color::White);
+			// test ROM reading for errors
+			romErrorCount += runRomErrorTest(testConfig, CyclesErrors);
+			TUI::printString(", ", 8 + ramErrorLength, 15, TUI::Color::Blue, TUI::Color::White);
+			TUI::printInt(romErrorCount, 10, 8 + ramErrorLength + 2, 15, TUI::Color::Blue, romErrorCount > 0 ? TUI::Color::Red : TUI::Color::White);
 		}
 	} while (true);
 	return 0;
