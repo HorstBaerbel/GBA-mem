@@ -3,5 +3,5 @@
 #pragma once
 #include <stdint.h>
 
-#define ROM_DATA_SIZE (24 * 1024) // size of ROM data in DWORDs
+#define ROM_DATA_SIZE (24 * 1024 / 4) // size of ROM data in DWORDs
 extern const uint32_t ROM_DATA[ROM_DATA_SIZE];
