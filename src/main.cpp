@@ -371,13 +371,13 @@ int main()
 	TUI::printString("ARM7 16MHz | Test", 0, 1, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("EWRAM 256K | Pattern:", 0, 2, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("Timings: EWRAM 3/3/6, ROM 4,2", 0, 3, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Read ROM     :", 0, 5, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Read EWRAM   :", 0, 6, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Write EWRAM  :", 0, 7, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Set EWRAM    :", 0, 8, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("Set EWRAM DMA:", 0, 9, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("IWRAM<-EWRAM :", 0, 10, TUI::Color::Blue, TUI::Color::White);
-	TUI::printString("IWRAM->EWRAM :", 0, 11, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Read ROM      :", 0, 5, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Read EWRAM    :", 0, 6, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Write EWRAM   :", 0, 7, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Fill EWRAM    :", 0, 8, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("Fill EWRAM DMA:", 0, 9, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("IWRAM<-EWRAM  :", 0, 10, TUI::Color::Blue, TUI::Color::White);
+	TUI::printString("IWRAM->EWRAM  :", 0, 11, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("IWRAM<-EWRAM DMA:", 0, 12, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("IWRAM->EWRAM DMA:", 0, 13, TUI::Color::Blue, TUI::Color::White);
 	TUI::printString("Errors: 0, 0", 0, 15, TUI::Color::Blue, TUI::Color::White);
@@ -414,13 +414,13 @@ int main()
 		if (testSpeed)
 		{
 			auto result = runSpeedTest(testConfig, CyclesSpeed);
-			printSpeed(result.romTime, result.bytesPerRomTest, 15, 5, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.readTime, result.bytesPerRamTest, 15, 6, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.writeTime, result.bytesPerRamTest, 15, 7, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.setTime, result.bytesPerRamTest, 15, 8, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.setDMATime, result.bytesPerRamTest, 15, 9, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.copyFromTime, result.bytesPerRamTest, 15, 10, TUI::Color::Blue, TUI::Color::White);
-			printSpeed(result.copyToTime, result.bytesPerRamTest, 15, 11, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.romTime, result.bytesPerRomTest, 16, 5, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.readTime, result.bytesPerRamTest, 16, 6, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.writeTime, result.bytesPerRamTest, 16, 7, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.setTime, result.bytesPerRamTest, 16, 8, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.setDMATime, result.bytesPerRamTest, 16, 9, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyFromTime, result.bytesPerRamTest, 16, 10, TUI::Color::Blue, TUI::Color::White);
+			printSpeed(result.copyToTime, result.bytesPerRamTest, 16, 11, TUI::Color::Blue, TUI::Color::White);
 			printSpeed(result.copyFromDMATime, result.bytesPerRamTest, 18, 12, TUI::Color::Blue, TUI::Color::White);
 			printSpeed(result.copyToDMATime, result.bytesPerRamTest, 18, 13, TUI::Color::Blue, TUI::Color::White);
 		}

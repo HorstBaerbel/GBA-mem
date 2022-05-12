@@ -97,6 +97,7 @@ The CMake build scripts / toolchain is from [Thomas Farr](https://github.com/Xta
 
 ## Todo
 
-* Test IS62WV12816EBLL-45TLI
+* Move all of the code to IWRAM
 * Use framework
+* Test IS62WV12816EBLL-45TLI
 * Try out [AGZ PCB](https://github.com/Zekfoo/AGZ)
