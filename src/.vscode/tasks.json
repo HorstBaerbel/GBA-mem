@@ -27,7 +27,7 @@
             "type": "shell",
             "command": "amap",
             "args": [
-                "${command:cmake.buildDirectory}/${command:cmake.launchTargetFilename}.map"
+                "${command:cmake.buildDirectory}/MemTestGBA.map"
             ],
             "options": {
                 "cwd": "${workspaceRoot}"

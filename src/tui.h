@@ -35,13 +35,13 @@ namespace TUI
 
     /// @brief Set up TUI mode: Mode0, BG0 + BG1 on
     /// Provides you with a noice 32x20 screen CGA color palette console text UI \o/
-    void setup();
+    void setup() IWRAM_CODE;
 
     /// @brief Fill whole background with color
-    void fillBackground(Color color);
+    void fillBackground(Color color) IWRAM_CODE;
 
     /// @brief Fill background rect with color
-    void fillBackgroundRect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color = Color::Black);
+    void fillBackgroundRect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, Color color = Color::Black) IWRAM_CODE;
 
     void printChar(char c, uint16_t x, uint16_t y, Color backColor = Color::Black, Color textColor = Color::White) IWRAM_CODE;
     uint16_t printChars(char c, uint16_t n, uint16_t x, uint16_t y, Color backColor = Color::Black, Color textColor = Color::White) IWRAM_CODE;
