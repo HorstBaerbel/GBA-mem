@@ -5,26 +5,45 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Starten",
+            "name": "Run MemTestGBA in mGBA",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/usr/local/bin/mgba-qt",
+            "preLaunchTask": "build Release",
+            "program": "/usr/bin/mgba-qt",
             "args": [
-                "-2",
+                "-3",
                 "${command:cmake.launchTargetPath}"
             ],
+            "cwd": "${command:cmake.buildDirectory}"
+        },
+        {
+            "name": "Debug MemTestGBA in mGBA",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "build Debug",
+            "program": "${command:cmake.buildDirectory}/MemTestGBA.elf",
+            "args": [],
             "stopAtEntry": false,
             "cwd": "${command:cmake.buildDirectory}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Automatische Strukturierung und Einrückung für \"gdb\" aktivieren",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
+            "miDebuggerServerAddress": "localhost:2345",
+            "linux": {
+                "miDebuggerPath": "${env:DEVKITARM}/bin/arm-none-eabi-gdb",
+                "setupCommands": [
+                    {
+                        "text": "set print pretty",
+                        "ignoreFailures": false
+                    },
+                    {
+                        "description": "mGBA",
+                        "text": "shell \"/usr/bin/mgba-qt\" -3 -g \"${command:cmake.buildDirectory}/MemTestGBA.elf\" &",
+                        "ignoreFailures": false
+                    }
+                ]
+            },
+            "postDebugTask": "kill mGBA"
         }
     ]
 }

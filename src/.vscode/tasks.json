@@ -12,15 +12,23 @@
             },
             "group": {
                 "kind": "build",
-                "isDefault": false
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build Debug",
+            "type": "shell",
+            "command": "cmake --build '${workspaceRoot}/build' --config Debug --target all -- -j 12",
+            "options": {
+                "cwd": "${workspaceRoot}"
             },
-            "presentation": {
-                "echo": false,
-                "reveal": "never",
-                "clear": true,
-                "showReuseMessage": false,
-                "revealProblems": "onProblem"
-            },
+            "group": "build",
+        },
+        {
+            "label": "kill mGBA",
+            "group": "none",
+            "type": "shell",
+            "command": "killall mgba-qt"
         },
         {
             "label": "Run amap",

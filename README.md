@@ -69,7 +69,7 @@ It will test the ROM read, EWRAM read / write and IWRAM ⟷ EWRAM copy speed (st
 
 ### From the command line
 
-* You **must** have [CMake](https://cmake.org/) 3.1.0 or higher, [devkitPro / devKitARM](https://devkitpro.org) r54 or higher [installed](https://devkitpro.org/wiki/Getting_Started).
+* You **must** have [CMake](https://cmake.org/) 3.1.0 or higher, [devkitPro / devKitARM](https://devkitpro.org) r58 or higher [installed](https://devkitpro.org/wiki/Getting_Started).
 * Navigate to the [src](src) folder, then:
 
 ```sh
